@@ -1,22 +1,25 @@
-extern "C" {
-#include "myjit/jitlib.h"
-}
+#include <stdio.h>
 
 #include "types.h"
-
-typedef void (*fn)();
+#include "utils.h"
+#include "parser.h"
 
 s32 main(s32 argc, char **argv) {
-	auto p = jit_init();
+	if(argc != 2) {
+		fprintf(stderr, "Usage: %s <file>\n", argv[0]);
+		return 1;
+	}
 
-	fn f;
-	jit_prolog(p, &f);
-	jit_msg(p, "Hello, World!\n");
-	jit_reti(p, 0);
-	jit_generate_code(p);
+	char *source = read_entire_file(argv[1]);
+	if(!source) {
+		fprintf(stderr, "Unable to read file: %s\n", argv[1]);
+		return 1;
+	}
 
-	f();
+	auto p = Parser(argv[1], source);
+	auto ast = p.parse();
 
-	jit_free(p);
+	printf("%p\n", ast);
+
 	return 0;
 }
