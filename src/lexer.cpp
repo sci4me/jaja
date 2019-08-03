@@ -219,9 +219,9 @@ void Lexer::find_next_token() {
  				exit(1);
  			}
 
- 			u32 len = end - start + 1;
+ 			u32 len = end - start + 2;
  			auto s = (char*) malloc(len);
- 			memcpy(s, source + start, len - 1);
+ 			memcpy(s, source + start, len);
  			s[len - 1] = 0;
 
  			emit(TokenType::STRING);

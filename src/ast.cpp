@@ -95,10 +95,39 @@ void Instruction::print_as_bytecode(u32 level) {
 			break;			
 		case OP_WHILE:
 			printf("while\n");
-			break;			
+			break;
+		default:
+			fprintf(stderr, "Invalid Instruction op: %d\n", op);
+			exit(1);
+			break;	
 	}
 }
 
 void Constant::print_as_bytecode(u32 level) {
+	indent(level);
 
+	switch(type) {
+		case CONST_TRUE:
+			printf("true\n");
+			break;
+		case CONST_FALSE:
+			printf("false\n");
+			break;
+		case CONST_NIL:
+			printf("nil\n");
+			break;
+		case CONST_NUMBER:
+			printf("%lli\n", number);
+			break;
+		case CONST_STRING:
+			printf("\"%s\"\n", string);
+			break;
+		case CONST_REFERENCE:
+			printf("%s\n", string);
+			break;
+		default:
+			fprintf(stderr, "Invalid Constant type: %d\n", type);
+			exit(1);
+			break;
+	}
 }
