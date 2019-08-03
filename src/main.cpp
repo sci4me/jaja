@@ -18,7 +18,10 @@ s32 main(s32 argc, char **argv) {
 
 	auto p = Parser(argv[1], source);
 	auto ast = p.parse();
-	
+
+	for(u32 i = 0; i < ast->count; i++) {
+		ast->data[i]->print_as_bytecode(0);
+	}
 
 	return 0;
 }

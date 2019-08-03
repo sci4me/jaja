@@ -5,11 +5,13 @@
 #include "array.h"
 
 struct Node {
-
+	virtual void print_as_bytecode(u32 level = 0) {}
 };
 
 struct Lambda : public Node {
 	Array<Node*> body;
+
+	void print_as_bytecode(u32 level = 0);
 };
 
 #define OP_EQ 				0x00
@@ -40,7 +42,9 @@ struct Lambda : public Node {
 struct Instruction : public Node {
 	u8 op;
 
-	Instruction(u8 _op) : op(_op) {} 
+	Instruction(u8 _op) : op(_op) {}
+
+	void print_as_bytecode(u32 level = 0);
 };
 
 #define CONST_TRUE 			0
@@ -58,7 +62,9 @@ struct Constant : public Node {
 	};
 
 	Constant(u8 _type, s64 _number) : type(_type), number(_number) {} 
-	Constant(u8 _type, char *_string) : type(_type), string(_string) {} 
+	Constant(u8 _type, char *_string) : type(_type), string(_string) {}
+
+	void print_as_bytecode(u32 level = 0);
 };
 
 #endif
