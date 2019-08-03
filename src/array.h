@@ -27,6 +27,7 @@ struct Array {
 		}
 
 		if(count >= size - 1) {
+			u32 old_size = size;
 			size *= 2;
 			data = (T*) realloc(data, size * sizeof(T));
 		}

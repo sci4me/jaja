@@ -12,10 +12,6 @@ struct Lambda : public Node {
 	Array<Node*> body;
 };
 
-struct While : public Node {
-
-};
-
 #define OP_EQ 				0x00
 #define OP_LT 				0x01
 #define OP_GT 				0x02
@@ -36,11 +32,15 @@ struct While : public Node {
 #define OP_DUP				0x11
 #define OP_DROP				0x12
 #define OP_SWAP				0x13
-#define OP_LOAD				0x14
-#define OP_STORE			0x15
+#define OP_ROT				0x14
+#define OP_LOAD				0x15
+#define OP_STORE			0x16
+#define OP_WHILE			0x17
 
 struct Instruction : public Node {
 	u8 op;
+
+	Instruction(u8 _op) : op(_op) {} 
 };
 
 #define CONST_TRUE 			0
@@ -56,6 +56,9 @@ struct Constant : public Node {
 		s64 number;
 		char *string;
 	};
+
+	Constant(u8 _type, s64 _number) : type(_type), number(_number) {} 
+	Constant(u8 _type, char *_string) : type(_type), string(_string) {} 
 };
 
 #endif

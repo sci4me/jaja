@@ -9,17 +9,14 @@ struct Parser {
 private:
 	Lexer lexer;
 
-	bool more();
+	Node* parse_any();
 
-	void next();
-
-	Token current();
+	Lambda* parse_lambda();
 
 public:
 	Parser(char *file, char *source);
-	~Parser();
 
-	Array<Node*> parse();
+	Array<Node*>* parse();
 };
 
 #endif

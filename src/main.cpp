@@ -18,8 +18,7 @@ s32 main(s32 argc, char **argv) {
 
 	auto p = Parser(argv[1], source);
 	auto ast = p.parse();
-
-	printf("%p\n", ast);
+	
 
 	return 0;
 }
