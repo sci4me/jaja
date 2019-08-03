@@ -14,97 +14,97 @@ Node* Parser::parse_any() {
 
 	switch(t.type) {
 		case TRUE:
-			result = new Constant(CONST_TRUE, 1);
+			result = new Constant(AST_CONST_TRUE, 1);
 			break;
 		case FALSE:
-			result = new Constant(CONST_FALSE, 1);
+			result = new Constant(AST_CONST_FALSE, 1);
 			break;
 		case NIL:
-			result = new Constant(CONST_NIL, 1);
+			result = new Constant(AST_CONST_NIL, 1);
 			break;
 		case NUMBER:
-			result = new Constant(CONST_NUMBER, strtoll(t.raw, 0, 0));
+			result = new Constant(AST_CONST_NUMBER, strtoll(t.raw, 0, 0));
 			break;
 		case STRING:
-			result = new Constant(CONST_STRING, t.raw);
+			result = new Constant(AST_CONST_STRING, t.raw);
 			break;
 		case REFERENCE:
-			result = new Constant(CONST_REFERENCE, t.raw);
+			result = new Constant(AST_CONST_REFERENCE, t.raw);
 			break;
 		case ADD:
-			result = new Instruction(OP_ADD);
+			result = new Instruction(AST_OP_ADD);
 			break;
 		case SUB:
-			result = new Instruction(OP_SUB);
+			result = new Instruction(AST_OP_SUB);
 			break;
 		case MUL:
-			result = new Instruction(OP_MUL);
+			result = new Instruction(AST_OP_MUL);
 			break;
 		case DIV:
-			result = new Instruction(OP_DIV);
+			result = new Instruction(AST_OP_DIV);
 			break;
 		case NEG:
-			result = new Instruction(OP_NEG);
+			result = new Instruction(AST_OP_NEG);
 			break;
 		case MOD:
-			result = new Instruction(OP_MOD);
+			result = new Instruction(AST_OP_MOD);
 			break;
 		case EQUAL:
-			result = new Instruction(OP_EQ);
+			result = new Instruction(AST_OP_EQ);
 			break;
 		case LESS:
-			result = new Instruction(OP_LT);
+			result = new Instruction(AST_OP_LT);
 			break;
 		case GREATER:
-			result = new Instruction(OP_GT);
+			result = new Instruction(AST_OP_GT);
 			break;
 		case NOT:
-			result = new Instruction(OP_NOT);
+			result = new Instruction(AST_OP_NOT);
 			break;
 		case AND:
-			result = new Instruction(OP_AND);
+			result = new Instruction(AST_OP_AND);
 			break;
 		case OR:
-			result = new Instruction(OP_OR);
+			result = new Instruction(AST_OP_OR);
 			break;
 		case STORE:
-			result = new Instruction(OP_STORE);
+			result = new Instruction(AST_OP_STORE);
 			break;
 		case LOAD:
-			result = new Instruction(OP_LOAD);
+			result = new Instruction(AST_OP_LOAD);
 			break;
 		case DUP:
-			result = new Instruction(OP_DUP);
+			result = new Instruction(AST_OP_DUP);
 			break;
 		case DROP:
-			result = new Instruction(OP_DROP);
+			result = new Instruction(AST_OP_DROP);
 			break;
 		case SWAP:
-			result = new Instruction(OP_SWAP);
+			result = new Instruction(AST_OP_SWAP);
 			break;
 		case ROT:
-			result = new Instruction(OP_ROT);
+			result = new Instruction(AST_OP_ROT);
 			break;
 		case NEWOBJECT:
-			result = new Instruction(OP_NEW_OBJECT);
+			result = new Instruction(AST_OP_NEW_OBJECT);
 			break;
 		case GETPROP:
-			result = new Instruction(OP_GET_PROP);
+			result = new Instruction(AST_OP_GET_PROP);
 			break;
 		case SETPROP:
-			result = new Instruction(OP_SET_PROP);
+			result = new Instruction(AST_OP_SET_PROP);
 			break;
 		case LAMBDA_START:
 			result = parse_lambda();
 			break;
 		case EXECUTE:
-			result = new Instruction(OP_EXEC);
+			result = new Instruction(AST_OP_EXEC);
 			break;
 		case CONDEXEC:
-			result = new Instruction(OP_COND_EXEC);
+			result = new Instruction(AST_OP_COND_EXEC);
 			break;
 		case WHILE:
-			result = new Instruction(OP_WHILE);
+			result = new Instruction(AST_OP_WHILE);
 			break;
 		default:
 			// TODO handle this

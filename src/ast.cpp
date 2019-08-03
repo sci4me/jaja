@@ -24,76 +24,76 @@ void Instruction::print_as_bytecode(u32 level) {
 	indent(level);
 
 	switch(op) {
-		case OP_EQ:
+		case AST_OP_EQ:
 			printf("eq\n");
 			break; 				
-		case OP_LT:
+		case AST_OP_LT:
 			printf("lt\n");
 			break; 				
-		case OP_GT:
+		case AST_OP_GT:
 			printf("gt\n");
 			break; 				
-		case OP_COND_EXEC:
+		case AST_OP_COND_EXEC:
 			printf("cond_exec\n");
 			break; 		
-		case OP_EXEC:
+		case AST_OP_EXEC:
 			printf("exec\n");	
 			break; 			
-		case OP_AND:
+		case AST_OP_AND:
 			printf("and\n");
 			break;				
-		case OP_OR:
+		case AST_OP_OR:
 			printf("or\n");
 			break;				
-		case OP_NOT:
+		case AST_OP_NOT:
 			printf("not\n");
 			break;				
-		case OP_ADD:
+		case AST_OP_ADD:
 			printf("add\n");
 			break;				
-		case OP_SUB:
+		case AST_OP_SUB:
 			printf("sub\n");
 			break;				
-		case OP_MUL:
+		case AST_OP_MUL:
 			printf("mul\n");
 			break;				
-		case OP_DIV:
+		case AST_OP_DIV:
 			printf("div\n");
 			break;				
-		case OP_NEG:
+		case AST_OP_NEG:
 			printf("neg\n");
 			break;				
-		case OP_MOD:
+		case AST_OP_MOD:
 			printf("mod\n");
 			break; 				
-		case OP_NEW_OBJECT:
+		case AST_OP_NEW_OBJECT:
 			printf("new_object\n");
 			break; 		
-		case OP_GET_PROP:
+		case AST_OP_GET_PROP:
 			printf("get_prop\n");
 			break;			
-		case OP_SET_PROP:
+		case AST_OP_SET_PROP:
 			printf("set_prop\n");
 			break;			
-		case OP_DUP:
+		case AST_OP_DUP:
 			printf("dup\n");
 			break;				
-		case OP_DROP:
+		case AST_OP_DROP:
 			printf("drop\n");
 			break;				
-		case OP_SWAP:
+		case AST_OP_SWAP:
 			printf("swap\n");
 			break;				
-		case OP_ROT:
+		case AST_OP_ROT:
 			printf("rot\n");
 			break;				
-		case OP_LOAD:
+		case AST_OP_LOAD:
 			printf("load\n");
 			break;				
-		case OP_STORE:
+		case AST_OP_STORE:
 			printf("store\n");
 			break;			
-		case OP_WHILE:
+		case AST_OP_WHILE:
 			printf("while\n");
 			break;
 		default:
@@ -107,22 +107,22 @@ void Constant::print_as_bytecode(u32 level) {
 	indent(level);
 
 	switch(type) {
-		case CONST_TRUE:
+		case AST_CONST_TRUE:
 			printf("true\n");
 			break;
-		case CONST_FALSE:
+		case AST_CONST_FALSE:
 			printf("false\n");
 			break;
-		case CONST_NIL:
+		case AST_CONST_NIL:
 			printf("nil\n");
 			break;
-		case CONST_NUMBER:
+		case AST_CONST_NUMBER:
 			printf("%lli\n", number);
 			break;
-		case CONST_STRING:
+		case AST_CONST_STRING:
 			printf("\"%s\"\n", string);
 			break;
-		case CONST_REFERENCE:
+		case AST_CONST_REFERENCE:
 			printf("%s\n", string);
 			break;
 		default:
