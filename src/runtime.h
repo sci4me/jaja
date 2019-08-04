@@ -36,15 +36,32 @@ struct Value {
 	union {
 		s64 number;
 		char *string;
-		Hash_Table<Value*, Value*>* object;
+		Hash_Table<Value, Value>* object;
 		Lambda lambda;
 	};
 
 	Value() {}
 
-	u64 hash();
+	bool operator==(const Value &b); // TODO REMOVEME
+};
 
-	bool operator==(const Value &b);
+struct Allocation {
+	Allocation *next;
+	bool marked;
+	Value value;
+};
+
+struct Heap {
+	Allocation *head;
+	Array<Value> roots;
+
+	Value alloc();
+	void mark_root(Value v);
+	void unmark_root(Value v);
+	void gc();
+
+	void mark(Value value);
+	void sweep();
 };
 
 struct Stack {
@@ -64,6 +81,38 @@ struct Scope {
 	void set(u32 key, Value value);
 	Value get(u32 key);
 };
+
+void __rt_eq(Stack *stack);
+void __rt_lt(Stack *stack);
+void __rt_gt(Stack *stack);
+
+void __rt_cond_exec(Stack *stack);
+void __rt_exec(Stack *stack);
+
+void __rt_and(Stack *stack);
+void __rt_or(Stack *stack);
+void __rt_not(Stack *stack);
+
+void __rt_add(Stack *stack);
+void __rt_sub(Stack *stack);
+void __rt_mul(Stack *stack);
+void __rt_div(Stack *stack);
+void __rt_neg(Stack *stack);
+void __rt_mod(Stack *stack);
+
+void __rt_newobj(Stack *stack, Heap *heap);
+void __rt_get_prop(Stack *stack);
+void __rt_set_prop(Stack *stack);
+
+void __rt_dup(Stack *stack);
+void __rt_drop(Stack *stack);
+void __rt_swap(Stack *stack);
+void __rt_rot(Stack *stack);
+
+void __rt_load(Stack *stack, Scope *scope);
+void __rt_store(Stack *stack, Scope *scope);
+
+void __rt_while(Stack *stack);
 
 void __rt_push_true(Stack *stack);
 void __rt_push_false(Stack *stack);

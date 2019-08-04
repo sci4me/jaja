@@ -1,9 +1,5 @@
 #include "runtime.h"
 
-u64 Value::hash() {
-	return 0;
-}
-
 bool Value::operator==(const Value &b) {
 	// TODO ?
 	return a == b.a;
@@ -29,7 +25,110 @@ Scope* Scope::push(u32 size) {
 }
 
 void Scope::pop() {
+	// TODO
+}
 
+static u64 __value_hash(Value v) {
+	return 0;
+}
+
+void __rt_eq(Stack *stack) {
+	// TODO
+}
+
+void __rt_lt(Stack *stack) {
+	// TODO
+}
+
+void __rt_gt(Stack *stack) {
+	// TODO
+}
+
+void __rt_cond_exec(Stack *stack) {
+	// TODO
+}
+
+void __rt_exec(Stack *stack) {
+	// TODO
+}
+
+void __rt_and(Stack *stack) {
+	// TODO
+}
+
+void __rt_or(Stack *stack) {
+	// TODO
+}
+
+void __rt_not(Stack *stack) {
+	// TODO
+}
+
+void __rt_add(Stack *stack) {
+	// TODO
+}
+
+void __rt_sub(Stack *stack) {
+	// TODO
+}
+
+void __rt_mul(Stack *stack) {
+	// TODO
+}
+
+void __rt_div(Stack *stack) {
+	// TODO
+}
+
+void __rt_neg(Stack *stack) {
+	// TODO
+}
+
+void __rt_mod(Stack *stack) {
+	// TODO
+}
+
+void __rt_newobj(Stack *stack, Heap *heap) {
+	auto v = heap->alloc();
+	v.type = VALUE_OBJECT;
+	v.object = new Hash_Table<Value, Value>(__value_hash);
+	stack->push(v);
+}
+
+void __rt_get_prop(Stack *stack) {
+	// TODO
+}
+
+void __rt_set_prop(Stack *stack) {
+	// TODO
+}
+
+void __rt_dup(Stack *stack) {
+	// TODO
+}
+
+void __rt_drop(Stack *stack) {
+	// TODO
+}
+
+void __rt_swap(Stack *stack) {
+	// TODO
+}
+
+void __rt_rot(Stack *stack) {
+	// TODO
+}
+
+void __rt_load(Stack *stack, Scope *scope) {
+	// TODO
+}
+
+void __rt_store(Stack *stack, Scope *scope) {
+	// TODO
+}
+
+void __rt_while(Stack *stack) {
+	// TODO
 }
 
 void __rt_push_true(Stack *stack) {

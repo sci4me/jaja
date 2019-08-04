@@ -1,4 +1,4 @@
-#include "gc.h"
+#include "runtime.h"
 
 Value Heap::alloc() {
 	auto a = new Allocation();
@@ -31,8 +31,8 @@ void Heap::mark(Value v) {
 
 	if(v.type == VALUE_OBJECT) {
 		for(u32 i = 0; i < v.object->count; i++) {
-			mark(*v.object->keys[i]);
-			mark(*v.object->values[i]);
+			mark(v.object->keys[i]);
+			mark(v.object->values[i]);
 		} 
 	}
 }

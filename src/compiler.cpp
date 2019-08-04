@@ -46,54 +46,106 @@ void Compiler::compile_lambda(jit *j, LambdaNode *n) {
 }
 
 void Compiler::compile_instruction(jit *j, InstructionNode *n) {
+	jit_prepare(j);
 	switch(n->op) {
 		case AST_OP_EQ:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_eq);
 			break;
 		case AST_OP_LT:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_lt);
 			break;
 		case AST_OP_GT:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_gt);
 			break;
 		case AST_OP_COND_EXEC:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_cond_exec);
 			break;
 		case AST_OP_EXEC:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_exec);
 			break;
 		case AST_OP_AND:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_and);
 			break;
 		case AST_OP_OR:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_or);
 			break;
 		case AST_OP_NOT:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_not);
 			break;
 		case AST_OP_ADD:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_add);
 			break;
 		case AST_OP_SUB:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_sub);
 			break;
 		case AST_OP_MUL:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_mul);
 			break;
 		case AST_OP_DIV:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_div);
 			break;
 		case AST_OP_NEG:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_neg);
 			break;
 		case AST_OP_MOD:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_mod);
 			break;
 		case AST_OP_NEW_OBJECT:
+			jit_putargr(j, R(2));
+			jit_putargr(j, R(0));
+			jit_call(j, __rt_newobj);
 			break;
 		case AST_OP_GET_PROP:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_get_prop);
 			break;
 		case AST_OP_SET_PROP:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_set_prop);
 			break;
 		case AST_OP_DUP:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_dup);
 			break;
 		case AST_OP_DROP:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_drop);
 			break;
 		case AST_OP_SWAP:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_swap);
 			break;
 		case AST_OP_ROT:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_rot);
 			break;
 		case AST_OP_LOAD:
+			jit_putargr(j, R(2));
+			jit_putargr(j, R(1));
+			jit_call(j, __rt_load);
 			break;
 		case AST_OP_STORE:
+			jit_putargr(j, R(2));
+			jit_putargr(j, R(1));
+			jit_call(j, __rt_store);
 			break;
 		case AST_OP_WHILE:
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_while);
 			break;
 		default:
 			assert(false);
