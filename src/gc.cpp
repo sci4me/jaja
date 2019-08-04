@@ -20,8 +20,8 @@ void Heap::unmark_root(Value *v) {
 }
 
 void Heap::gc() {
-	for(u32 i = 0; i < roots.count; i++) {
-		mark(roots[i]);
+	FOR((&roots), i) {
+		mark(roots.data[i]);
 	}
 
 	sweep();

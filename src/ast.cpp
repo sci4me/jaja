@@ -13,7 +13,7 @@ void LambdaNode::print_as_bytecode(u32 level) {
 	printf("lambda {\n");
 
 	for(u32 i = 0; i < body.count; i++) {
-		body[i]->print_as_bytecode(level + 1);
+		body.data[i]->print_as_bytecode(level + 1);
 	}
 
 	indent(level);

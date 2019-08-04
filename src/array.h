@@ -5,6 +5,8 @@
 
 #include "types.h"
 
+#define FOR(a, i) for(u32 i = 0; i < a->count; i++)
+
 template<typename T>
 struct Array {
 	u32 size;
@@ -75,14 +77,6 @@ struct Array {
 			if(data[i] == value) return i;
 		}
 		return -1;
-	}
-
-	T operator[](u32 index) const {
-		return data[index];
-	}
-
-	T& operator[](u32 index) {
-		return data[index];
 	}
 };
 

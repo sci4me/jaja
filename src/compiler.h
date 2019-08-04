@@ -3,9 +3,14 @@
 
 #include "ast.h"
 #include "runtime.h"
+#include "gc.h"
 
 struct Compiler {
-	Lambda* compile(Array<Node*>* ast);
+	Heap *heap;
+
+	Compiler(Heap *_heap) : heap(_heap) {}
+
+	Value* compile(Array<Node*>* ast);
 };
 
 #endif

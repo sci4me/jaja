@@ -36,7 +36,7 @@ struct Value {
 		s64 number;
 		char *string;
 		Hash_Table<Value*, Value*>* object;
-		Lambda *lambda;
+		Lambda lambda;
 	};
 
 	Value() {}

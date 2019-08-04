@@ -4,6 +4,7 @@
 #include "utils.h"
 #include "parser.h"
 #include "compiler.h"
+#include "gc.h"
 
 s32 main(s32 argc, char **argv) {
 	if(argc != 2) {
@@ -19,11 +20,12 @@ s32 main(s32 argc, char **argv) {
 
 	auto p = Parser(argv[1], source);
 	auto ast = p.parse();
-	auto compiler = Compiler();
+	auto heap = Heap();
+	auto compiler = Compiler(&heap);
 	auto main = compiler.compile(ast);
 	auto G = Scope();
 	auto stack = Stack();
-	(*main->fn)(&G, &stack);
+	(*main->lambda.fn)(&G, &stack);
 
 	return 0;
 }

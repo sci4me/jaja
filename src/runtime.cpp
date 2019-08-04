@@ -11,7 +11,7 @@ void Stack::push(Value *v) {
 Value* Stack::pop() {
 	assert(data.count - 1 >= 0);
 	auto i = data.count - 1;
-	auto v = data[i];
+	auto v = data.data[i];
 	assert(data.unordered_remove(i));
 	return v;
 }
