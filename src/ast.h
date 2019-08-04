@@ -6,12 +6,22 @@
 
 // TODO: convert this to be a tagged union instead of inheritance
 
+#define NODE_LAMBDA 0
+#define NODE_INSTRUCTION 1
+#define NODE_CONSTANT 2
+
 struct Node {
+	u8 type;
+
+	Node(u8 _type) : type(_type) {}
+
 	virtual void print_as_bytecode(u32 level = 0) {}
 };
 
 struct LambdaNode : public Node {
 	Array<Node*> body;
+
+	LambdaNode() : Node(NODE_LAMBDA) {}
 
 	void print_as_bytecode(u32 level = 0);
 };
@@ -44,7 +54,7 @@ struct LambdaNode : public Node {
 struct InstructionNode : public Node {
 	u8 op;
 
-	InstructionNode(u8 _op) : op(_op) {}
+	InstructionNode(u8 _op) : Node(NODE_INSTRUCTION), op(_op) {}
 
 	void print_as_bytecode(u32 level = 0);
 };
@@ -63,8 +73,8 @@ struct ConstantNode : public Node {
 		char *string;
 	};
 
-	ConstantNode(u8 _type, s64 _number) : type(_type), number(_number) {} 
-	ConstantNode(u8 _type, char *_string) : type(_type), string(_string) {}
+	ConstantNode(u8 _type, s64 _number) : Node(NODE_CONSTANT), type(_type), number(_number) {} 
+	ConstantNode(u8 _type, char *_string) : Node(NODE_CONSTANT), type(_type), string(_string) {}
 
 	void print_as_bytecode(u32 level = 0);
 };
