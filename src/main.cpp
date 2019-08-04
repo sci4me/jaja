@@ -20,12 +20,16 @@ s32 main(s32 argc, char **argv) {
 
 	auto p = Parser(argv[1], source);
 	auto ast = p.parse();
+
 	auto heap = Heap();
 	auto compiler = Compiler(&heap);
+	
 	auto main = compiler.compile(ast);
+	
 	auto G = Scope();
 	auto stack = Stack();
-	(*main.lambda.fn)(&G, &stack);
+	
+	(*main.lambda.fn)(&heap, &G, &stack);
 
 	return 0;
 }

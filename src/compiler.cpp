@@ -6,8 +6,13 @@ Value Compiler::compile(Array<Node*>* ast) {
 	auto j = jit_init();	
 	jit_enable_optimization(j, JIT_OPT_ALL);
 	jit_prolog(j, &result.lambda.fn);
+	jit_declare_arg(j, JIT_PTR, sizeof(Heap*));
 	jit_declare_arg(j, JIT_PTR, sizeof(Scope*));
 	jit_declare_arg(j, JIT_PTR, sizeof(Stack*));
+
+	jit_getarg(j, R(0), 0);
+	jit_getarg(j, R(1), 1);
+	jit_getarg(j, R(2), 2);
 
 	FOR(ast, i) {
 		auto node = ast->data[i];
@@ -98,16 +103,46 @@ void Compiler::compile_instruction(jit *j, InstructionNode *n) {
 void Compiler::compile_constant(jit *j, ConstantNode *n) {
 	switch(n->type) {
 		case AST_CONST_TRUE:
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_push_true);
 			break;
 		case AST_CONST_FALSE:
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_push_false);
 			break;
 		case AST_CONST_NIL:
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_call(j, __rt_push_nil);
 			break;
 		case AST_CONST_NUMBER:
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_putargi(j, n->number);
+			jit_call(j, __rt_push_number);
 			break;
-		case AST_CONST_STRING:
+		case AST_CONST_STRING: {
+			jit_op *skip_data = jit_jmpi(j, JIT_FORWARD);
+			jit_label *l = jit_get_label(j);
+			jit_data_str(j, n->string);
+			jit_code_align(j, 32);
+			jit_patch(j, skip_data);
+
+			jit_ref_data(j, R(3), l);
+
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_putargr(j, R(3));
+			jit_call(j, __rt_push_string);
 			break;
+		}
 		case AST_CONST_REFERENCE:
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_putargi(j, n->number);
+			jit_call(j, __rt_push_reference);
 			break;
 		default:
 			break;
