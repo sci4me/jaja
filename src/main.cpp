@@ -25,7 +25,7 @@ s32 main(s32 argc, char **argv) {
 	auto main = compiler.compile(ast);
 	auto G = Scope();
 	auto stack = Stack();
-	(*main->lambda.fn)(&G, &stack);
+	(*main.lambda.fn)(&G, &stack);
 
 	return 0;
 }

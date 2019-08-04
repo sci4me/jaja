@@ -1,11 +1,11 @@
 #include "compiler.h"
 
-Value* Compiler::compile(Array<Node*>* ast) {
+Value Compiler::compile(Array<Node*>* ast) {
 	auto result = heap->alloc();
 	
 	auto j = jit_init();	
 	jit_enable_optimization(j, JIT_OPT_ALL);
-	jit_prolog(j, &result->lambda.fn);
+	jit_prolog(j, &result.lambda.fn);
 	jit_declare_arg(j, JIT_PTR, sizeof(Scope*));
 	jit_declare_arg(j, JIT_PTR, sizeof(Stack*));
 

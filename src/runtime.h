@@ -42,6 +42,8 @@ struct Value {
 	Value() {}
 
 	u64 hash();
+
+	bool operator==(const Value &b);
 };
 
 struct Stack {

@@ -4,6 +4,11 @@ u64 Value::hash() {
 	return 0;
 }
 
+bool Value::operator==(const Value &b) {
+	// TODO ?
+	return a == b.a;
+}
+
 void Stack::push(Value *v) {
 	data.add(v);
 }

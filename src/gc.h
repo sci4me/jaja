@@ -6,19 +6,19 @@
 struct Allocation {
 	Allocation *next;
 	bool marked;
-	Value *value;
+	Value value;
 };
 
 struct Heap {
 	Allocation *head;
-	Array<Value*> roots;
+	Array<Value> roots;
 
-	Value* alloc();
-	void mark_root(Value *v);
-	void unmark_root(Value *v);
+	Value alloc();
+	void mark_root(Value v);
+	void unmark_root(Value v);
 	void gc();
 
-	void mark(Value* value);
+	void mark(Value value);
 	void sweep();
 };
 
