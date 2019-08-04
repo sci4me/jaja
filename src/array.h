@@ -17,8 +17,18 @@ struct Array {
 		data = 0;
 	}
 
+	Array(u64 capacity) {
+		size = capacity;
+		count = 0;
+		data = (T*) calloc(size, sizeof(T));
+	}
+
 	~Array() {
 		free(data);
+	}
+
+	void clear() {
+		count = 0;
 	}
 
 	void add(T value) {
@@ -38,8 +48,13 @@ struct Array {
 	bool unordered_remove(u32 index) {
 		if(index >= count) return false;
 
-		data[index] = data[count - 1];
+		auto v = data[count - 1];
 		count--;
+
+		if(index < count) {
+			auto tmp = data[index];
+			data[index]  = v;
+		}
 
 		return true;
 	}
@@ -55,7 +70,7 @@ struct Array {
 		return true;
 	}
 
-	u32 index_of(T value) {
+	s64 index_of(T value) {
 		for(u32 i = 0; i < count; i++) {
 			if(data[i] == value) return i;
 		}

@@ -3,6 +3,7 @@
 #include "types.h"
 #include "utils.h"
 #include "parser.h"
+#include "compiler.h"
 
 s32 main(s32 argc, char **argv) {
 	if(argc != 2) {
@@ -18,10 +19,11 @@ s32 main(s32 argc, char **argv) {
 
 	auto p = Parser(argv[1], source);
 	auto ast = p.parse();
-
-	for(u32 i = 0; i < ast->count; i++) {
-		ast->data[i]->print_as_bytecode(0);
-	}
+	auto compiler = Compiler();
+	auto main = compiler.compile(ast);
+	auto G = Scope();
+	auto stack = Stack();
+	(*main->fn)(&G, &stack);
 
 	return 0;
 }

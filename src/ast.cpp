@@ -8,7 +8,7 @@ static void indent(u32 level) {
 	}
 }
 
-void Lambda::print_as_bytecode(u32 level) {
+void LambdaNode::print_as_bytecode(u32 level) {
 	indent(level);
 	printf("lambda {\n");
 
@@ -20,7 +20,7 @@ void Lambda::print_as_bytecode(u32 level) {
 	printf("}\n");
 }
 
-void Instruction::print_as_bytecode(u32 level) {
+void InstructionNode::print_as_bytecode(u32 level) {
 	indent(level);
 
 	switch(op) {
@@ -97,13 +97,13 @@ void Instruction::print_as_bytecode(u32 level) {
 			printf("while\n");
 			break;
 		default:
-			fprintf(stderr, "Invalid Instruction op: %d\n", op);
+			fprintf(stderr, "Invalid InstructionNode op: %d\n", op);
 			exit(1);
 			break;	
 	}
 }
 
-void Constant::print_as_bytecode(u32 level) {
+void ConstantNode::print_as_bytecode(u32 level) {
 	indent(level);
 
 	switch(type) {
@@ -126,7 +126,7 @@ void Constant::print_as_bytecode(u32 level) {
 			printf("%s\n", string);
 			break;
 		default:
-			fprintf(stderr, "Invalid Constant type: %d\n", type);
+			fprintf(stderr, "Invalid ConstantNode type: %d\n", type);
 			exit(1);
 			break;
 	}

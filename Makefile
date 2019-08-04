@@ -11,7 +11,7 @@ EXECUTABLE=se
 LDFLAGS=
 CXXFLAGS=
 
-.PHONY: all clean
+.PHONY: all clean run
 
 all: release
 
@@ -21,7 +21,7 @@ release: $(EXECUTABLE)
 
 debug: clean
 debug: LDFLAGS+=-g
-debug: CXXFLAGS+=-g
+debug: CXXFLAGS+=-g -O0
 debug: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)

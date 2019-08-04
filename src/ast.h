@@ -4,11 +4,13 @@
 #include "types.h"
 #include "array.h"
 
+// TODO: convert this to be a tagged union instead of inheritance
+
 struct Node {
 	virtual void print_as_bytecode(u32 level = 0) {}
 };
 
-struct Lambda : public Node {
+struct LambdaNode : public Node {
 	Array<Node*> body;
 
 	void print_as_bytecode(u32 level = 0);
@@ -39,10 +41,10 @@ struct Lambda : public Node {
 #define AST_OP_STORE			0x16
 #define AST_OP_WHILE			0x17
 
-struct Instruction : public Node {
+struct InstructionNode : public Node {
 	u8 op;
 
-	Instruction(u8 _op) : op(_op) {}
+	InstructionNode(u8 _op) : op(_op) {}
 
 	void print_as_bytecode(u32 level = 0);
 };
@@ -54,15 +56,15 @@ struct Instruction : public Node {
 #define AST_CONST_STRING		4
 #define AST_CONST_REFERENCE		5
 
-struct Constant : public Node {
+struct ConstantNode : public Node {
 	u8 type;
 	union {
 		s64 number;
 		char *string;
 	};
 
-	Constant(u8 _type, s64 _number) : type(_type), number(_number) {} 
-	Constant(u8 _type, char *_string) : type(_type), string(_string) {}
+	ConstantNode(u8 _type, s64 _number) : type(_type), number(_number) {} 
+	ConstantNode(u8 _type, char *_string) : type(_type), string(_string) {}
 
 	void print_as_bytecode(u32 level = 0);
 };

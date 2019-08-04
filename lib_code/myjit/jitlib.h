@@ -20,7 +20,7 @@
 #ifndef JITLIB_H
 #define JITLIB_H
 
-#define _XOPEN_SOURCE 600
+// #define _XOPEN_SOURCE 600
 
 #include <stdint.h>
 #include <stdlib.h>
