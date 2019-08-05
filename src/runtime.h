@@ -42,7 +42,7 @@ struct Value {
 
 	Value() {}
 
-	bool operator==(const Value &b); // TODO REMOVEME
+	bool operator==(const Value &other);
 };
 
 struct Allocation {
@@ -86,8 +86,8 @@ void __rt_eq(Stack *stack);
 void __rt_lt(Stack *stack);
 void __rt_gt(Stack *stack);
 
-void __rt_cond_exec(Stack *stack);
-void __rt_exec(Stack *stack);
+void __rt_cond_exec(Heap *heap, Scope *scope, Stack *stack);
+void __rt_exec(Heap *heap, Scope *scope, Stack *stack);
 
 void __rt_and(Stack *stack);
 void __rt_or(Stack *stack);
@@ -120,5 +120,6 @@ void __rt_push_nil(Stack *stack);
 void __rt_push_number(Stack *stack, s64 n);
 void __rt_push_string(Stack *stack, char *s);
 void __rt_push_reference(Stack *stack, u64 r);
+void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn);
 
 #endif

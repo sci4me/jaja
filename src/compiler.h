@@ -5,12 +5,15 @@
 #include "runtime.h"
 #include "gc.h"
 
+#define DEBUG
+
 struct Compiler {
 	Heap *heap;
 
 	Compiler(Heap *_heap) : heap(_heap) {}
 
 	Value compile(Array<Node*>* ast);
+	Lambda compile_raw(Array<Node*>* ast);
 	void compile_lambda(jit *j, LambdaNode *n);
 	void compile_instruction(jit *j, InstructionNode *n);
 	void compile_constant(jit *j, ConstantNode *n);

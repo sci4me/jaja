@@ -1,8 +1,29 @@
+#include <string.h>
+
 #include "runtime.h"
 
-bool Value::operator==(const Value &b) {
-	// TODO ?
-	return a == b.a;
+bool Value::operator==(const Value &other) {
+	if(type != other.type) return false;
+
+	switch(type) {
+		case VALUE_TRUE:
+		case VALUE_FALSE:
+		case VALUE_NIL:
+			return true;
+		case VALUE_NUMBER:
+		case VALUE_REFERENCE:
+			return number == other.number;
+			break;
+		case VALUE_STRING:
+			return strcmp(string, other.string) == 0;
+		case VALUE_OBJECT:
+			assert(false); // TODO
+			break;
+		case VALUE_LAMBDA:
+			return a == other.a;
+	}
+
+	return false;
 }
 
 void Stack::push(Value v) {
@@ -15,6 +36,14 @@ Value Stack::pop() {
 	auto v = data.data[i];
 	assert(data.unordered_remove(i));
 	return v;
+}
+
+void Scope::set(u32 key, Value value) {
+	values.data[key] = value;
+}
+
+Value Scope::get(u32 key) {
+	return values.data[key];
 }
 
 Scope* Scope::push(u32 size) {
@@ -33,59 +62,235 @@ static u64 __value_hash(Value v) {
 }
 
 void __rt_eq(Stack *stack) {
-	// TODO
+	auto b = stack->pop();
+	auto a = stack->pop();
+
+	Value c;
+
+	if((a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) || (a.type == VALUE_REFERENCE && b.type == VALUE_REFERENCE)) {
+		c.type = a.number == b.number ? VALUE_TRUE : VALUE_FALSE;
+	} else if(a.type == VALUE_STRING && b.type == VALUE_STRING) {
+		if(strcmp(a.string, b.string) == 0) {
+			c.type = VALUE_TRUE;
+		} else {
+			c.type = VALUE_FALSE;
+		}
+	} else if((a.type == VALUE_TRUE && b.type == VALUE_TRUE) || (a.type == VALUE_FALSE && b.type == VALUE_FALSE) || (a.type == VALUE_NIL && b.type == VALUE_NIL)) {
+		c.type = VALUE_TRUE;
+	} else if(a.type == VALUE_OBJECT && b.type == VALUE_OBJECT) {
+		// TODO
+		assert(false);
+	} else if(a.type == VALUE_LAMBDA && b.type == VALUE_LAMBDA) {
+		// TODO
+		assert(false);
+	} else {
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
 void __rt_lt(Stack *stack) {
-	// TODO
+	auto b = stack->pop();
+	auto a = stack->pop();
+
+	Value c;
+
+	if((a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) || (a.type == VALUE_REFERENCE && b.type == VALUE_REFERENCE)) {
+		c.type = a.number < b.number ? VALUE_TRUE : VALUE_FALSE;
+	} else {
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
 void __rt_gt(Stack *stack) {
-	// TODO
+	auto b = stack->pop();
+	auto a = stack->pop();
+
+	Value c;
+
+	if((a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) || 
+		(a.type == VALUE_REFERENCE && b.type == VALUE_REFERENCE)) {
+		c.type = a.number > b.number ? VALUE_TRUE : VALUE_FALSE;
+	} else {
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
-void __rt_cond_exec(Stack *stack) {
-	// TODO
+void __rt_cond_exec(Heap *heap, Scope *scope, Stack *stack) {
+	auto body = stack->pop();
+	auto cond = stack->pop();
+
+	assert(body.type == VALUE_LAMBDA);
+
+	if(cond.type == VALUE_TRUE || 
+		cond.type == VALUE_OBJECT || 
+		cond.type == VALUE_STRING || 
+		cond.type == VALUE_REFERENCE || 
+		cond.type == VALUE_NUMBER || 
+		cond.type == VALUE_NUMBER) {
+		(*body.lambda.fn)(heap, scope, stack);
+	}
 }
 
-void __rt_exec(Stack *stack) {
-	// TODO
+void __rt_exec(Heap *heap, Scope *scope, Stack *stack) {
+	auto lambda = stack->pop();
+
+	assert(lambda.type == VALUE_LAMBDA);
+
+	(*lambda.lambda.fn)(heap, scope, stack);
 }
 
 void __rt_and(Stack *stack) {
-	// TODO
+	auto b = stack->pop();
+	auto a = stack->pop();
+
+	Value c;
+
+	if((a.type == VALUE_TRUE || a.type == VALUE_FALSE) && (b.type == VALUE_TRUE || b.type == VALUE_FALSE)) {
+		c.type = a.type == VALUE_TRUE && b.type == VALUE_TRUE ? VALUE_TRUE : VALUE_FALSE;
+	} else if(a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) {
+		c.type = VALUE_NUMBER;
+		c.number = a.number & b.number;
+	} else {
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
 void __rt_or(Stack *stack) {
-	// TODO
+	auto b = stack->pop();
+	auto a = stack->pop();
+
+	Value c;
+
+	if((a.type == VALUE_TRUE || a.type == VALUE_FALSE) && (b.type == VALUE_TRUE || b.type == VALUE_FALSE)) {
+		c.type = a.type == VALUE_TRUE || b.type == VALUE_TRUE ? VALUE_TRUE : VALUE_FALSE;
+	} else if(a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) {
+		c.type = VALUE_NUMBER;
+		c.number = a.number | b.number;
+	} else {
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
 void __rt_not(Stack *stack) {
-	// TODO
+	auto a = stack->pop();
+
+	Value c;
+
+	if(a.type == VALUE_TRUE) {
+		c.type = VALUE_FALSE;
+	} else if(a.type == VALUE_FALSE) {
+		c.type = VALUE_TRUE;
+	} else {
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
 void __rt_add(Stack *stack) {
-	// TODO
+	auto b = stack->pop();
+	auto a = stack->pop();
+
+	Value c;
+
+	if(a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) {
+		c.type = VALUE_NUMBER;
+		c.number = a.number + b.number;
+	} else if(a.type == VALUE_STRING || b.type == VALUE_STRING) {
+		// TODO: string concatenation
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
 void __rt_sub(Stack *stack) {
-	// TODO
+	auto b = stack->pop();
+	auto a = stack->pop();
+
+	Value c;
+
+	if(a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) {
+		c.type = VALUE_NUMBER;
+		c.number = a.number - b.number;
+	} else {
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
 void __rt_mul(Stack *stack) {
-	// TODO
+	auto b = stack->pop();
+	auto a = stack->pop();
+
+	Value c;
+
+	if(a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) {
+		c.type = VALUE_NUMBER;
+		c.number = a.number * b.number;
+	} else {
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
 void __rt_div(Stack *stack) {
-	// TODO
+	auto b = stack->pop();
+	auto a = stack->pop();
+
+	Value c;
+
+	if(a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) {
+		c.type = VALUE_NUMBER;
+		c.number = a.number / b.number;
+	} else {
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
 void __rt_neg(Stack *stack) {
-	// TODO
+	auto a = stack->pop();
+
+	Value c;
+
+	if(a.type == VALUE_NUMBER) {
+		c.type = VALUE_NUMBER;
+		c.number = -a.number;
+	} else {
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
 void __rt_mod(Stack *stack) {
-	// TODO
+	auto b = stack->pop();
+	auto a = stack->pop();
+
+	Value c;
+
+	if(a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) {
+		c.type = VALUE_NUMBER;
+		c.number = a.number % b.number;
+	} else {
+		assert(false);
+	}
+
+	stack->push(c);
 }
 
 void __rt_newobj(Stack *stack, Heap *heap) {
@@ -96,7 +301,13 @@ void __rt_newobj(Stack *stack, Heap *heap) {
 }
 
 void __rt_get_prop(Stack *stack) {
-	// TODO
+	auto value = stack->pop();
+	auto key = stack->pop();
+	auto object = stack->pop();
+
+	assert(object.type == VALUE_OBJECT);
+
+	object.object->put(key, value);
 }
 
 void __rt_set_prop(Stack *stack) {
@@ -157,7 +368,7 @@ void __rt_push_number(Stack *stack, s64 n) {
 }
 
 void __rt_push_string(Stack *stack, char *s) {
-	Value v;
+	Value v; // TODO: allocate on Heap?
 	v.type = VALUE_STRING;
 	v.string = s;
 	stack->push(v);
@@ -167,5 +378,13 @@ void __rt_push_reference(Stack *stack, u64 r) {
 	Value v;
 	v.type = VALUE_REFERENCE;
 	v.number = r;
+	stack->push(v);
+}
+
+void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn) {
+	auto v = heap->alloc();
+	v.type = VALUE_LAMBDA;
+	v.lambda.j = j;
+	v.lambda.fn = fn;
 	stack->push(v);
 }

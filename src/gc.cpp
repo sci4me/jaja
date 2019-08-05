@@ -22,7 +22,6 @@ void Heap::gc() {
 	FOR((&roots), i) {
 		mark(roots.data[i]);
 	}
-
 	sweep();
 }
 
