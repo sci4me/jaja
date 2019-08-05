@@ -14,8 +14,7 @@ void Heap::mark_root(Value v) {
 
 void Heap::unmark_root(Value v) {
 	auto i = roots.index_of(v);
-	assert(i != -1);
-	roots.unordered_remove(i);
+	if(i != -1)	roots.unordered_remove(i);
 }
 
 void Heap::gc() {

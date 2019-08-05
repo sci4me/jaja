@@ -16,6 +16,7 @@
 template <typename K, typename V>
 struct Hash_Table {
     u64 (*hash_fn)(K key);
+    bool (*eq_fn)(K a, K b);
 
     u32 size;
     u32 count;
@@ -46,7 +47,7 @@ struct Hash_Table {
         }
     }
 
-    Hash_Table(u64 (*_hash_fn)(K data), u32 _size = 16) : hash_fn(_hash_fn), size(_size) {
+    Hash_Table(u64 (*_hash_fn)(K data), bool (*_eq_fn)(K a, K b), u32 _size = 16) : hash_fn(_hash_fn), eq_fn(_eq_fn), size(_size) {
         assert(size > 0);
         count = 0;
         keys = (K*) calloc(size, sizeof(K));
@@ -67,7 +68,7 @@ struct Hash_Table {
         for(;;) {
             index &= (size - 1);
             if(state[index] == HT_STATE_OCCUPIED) {
-                if(keys[index] == key) {
+                if(eq_fn(keys[index], key)) {
                     values[index] = value;
                     break;
                 }
@@ -86,22 +87,25 @@ struct Hash_Table {
         u64 index = hash_fn(key) % size;
         for(;;) {
             index &= (size - 1);
-            if(state[index] == HT_STATE_OCCUPIED && keys[index] == key) {
+            if(state[index] == HT_STATE_OCCUPIED && eq_fn(keys[index], key)) {
                 return values[index];
             } else if(state[index] == HT_STATE_EMPTY) {
-                return 0;
+                goto _return_zero;
             }
             index++;
         }
 
-        return 0;
+_return_zero:
+        V x;
+        memset(&x, 0, sizeof(x));
+        return x;
     }
 
     bool remove(K key) {
         u64 index = hash_fn(key) % size;
         for(;;) {
             index &= (size - 1);
-            if(state[index] == HT_STATE_OCCUPIED && keys[index] == key) {
+            if(state[index] == HT_STATE_OCCUPIED && eq_fn(keys[index], key)) {
                 memset(&keys[index], 0, sizeof(K));
                 memset(&values[index], 0, sizeof(V));
                 state[index] = HT_STATE_REMOVED;

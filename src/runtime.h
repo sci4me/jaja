@@ -42,6 +42,8 @@ struct Value {
 
 	Value() {}
 
+	bool is_truthy();
+
 	bool operator==(const Value &other);
 };
 
@@ -73,13 +75,15 @@ struct Stack {
 
 struct Scope {
 	Scope *parent;
-	Array<Value> values;
+	Hash_Table<char*, Value> values;
 
-	Scope *push(u32 size);
-	void pop();
+	Scope(Scope *_parent) : parent(_parent), values(Hash_Table<char*, Value>(hash_string, eq_string)) {}
 
-	void set(u32 key, Value value);
-	Value get(u32 key);
+	Scope *push();
+	void pop(Heap *heap);
+
+	void set(char *key, Value value);
+	Value get(char *key);
 };
 
 void __rt_eq(Stack *stack);
@@ -110,16 +114,21 @@ void __rt_swap(Stack *stack);
 void __rt_rot(Stack *stack);
 
 void __rt_load(Stack *stack, Scope *scope);
-void __rt_store(Stack *stack, Scope *scope);
+void __rt_store(Heap *heap, Scope *scope, Stack *stack);
 
-void __rt_while(Stack *stack);
+void __rt_while(Heap *heap, Scope *scope, Stack *stack);
 
 void __rt_push_true(Stack *stack);
 void __rt_push_false(Stack *stack);
 void __rt_push_nil(Stack *stack);
 void __rt_push_number(Stack *stack, s64 n);
 void __rt_push_string(Stack *stack, char *s);
-void __rt_push_reference(Stack *stack, u64 r);
+void __rt_push_reference(Stack *stack, char *r);
 void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn);
+
+void __rt_epilogue(Scope *scope, Heap *heap);
+
+void __std_print(Heap *heap, Scope *scope, Stack *stack);
+void __std_println(Heap *heap, Scope *scope, Stack *stack);
 
 #endif

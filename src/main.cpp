@@ -6,6 +6,8 @@
 #include "compiler.h"
 #include "gc.h"
 
+#define ADD_STD_FN(g, func, name) { Value v; v.a = 0; v.type = VALUE_LAMBDA; v.lambda.fn = func; g.set((char*)name, v); }
+
 s32 main(s32 argc, char **argv) {
 	if(argc != 2) {
 		fprintf(stderr, "Usage: %s <file>\n", argv[0]);
@@ -26,7 +28,11 @@ s32 main(s32 argc, char **argv) {
 	
 	auto main = compiler.compile(ast);
 	
-	auto G = Scope();
+	auto G = Scope(NULL);
+
+	ADD_STD_FN(G, __std_print, "print");
+	ADD_STD_FN(G, __std_println, "println");
+
 	auto stack = Stack();
 	
 	(*main.lambda.fn)(&heap, &G, &stack);

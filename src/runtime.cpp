@@ -2,6 +2,23 @@
 
 #include "runtime.h"
 
+bool Value::is_truthy() {
+	switch(type) {
+		case VALUE_FALSE:	
+		case VALUE_NIL:
+			return false;
+		case VALUE_TRUE:	
+		case VALUE_NUMBER:	
+		case VALUE_STRING:	
+		case VALUE_REFERENCE:	
+		case VALUE_OBJECT:	
+		case VALUE_LAMBDA:
+			return true;
+		default:
+			assert(false);	
+	}
+}
+
 bool Value::operator==(const Value &other) {
 	if(type != other.type) return false;
 
@@ -17,8 +34,6 @@ bool Value::operator==(const Value &other) {
 		case VALUE_STRING:
 			return strcmp(string, other.string) == 0;
 		case VALUE_OBJECT:
-			assert(false); // TODO
-			break;
 		case VALUE_LAMBDA:
 			return a == other.a;
 	}
@@ -38,27 +53,51 @@ Value Stack::pop() {
 	return v;
 }
 
-void Scope::set(u32 key, Value value) {
-	values.data[key] = value;
+void Scope::set(char *key, Value value) {
+	values.put(key, value);
 }
 
-Value Scope::get(u32 key) {
-	return values.data[key];
+Value Scope::get(char *key) {
+	return values.get(key);
 }
 
-Scope* Scope::push(u32 size) {
-	auto s = new Scope();
-	s->parent = this;
-	s->values = Array<Value>((u64)size);
-	return s;
+Scope* Scope::push() {
+	return new Scope(this);
 }
 
-void Scope::pop() {
-	// TODO
+void Scope::pop(Heap *heap) {
+	for(u32 i = 0; i < values.count; i++) {
+		heap->unmark_root(values.values[i]);
+	}
 }
 
 static u64 __value_hash(Value v) {
-	return 0;
+	switch(v.type) {
+		case VALUE_TRUE:
+			return 1;
+		case VALUE_FALSE:
+			return 0;
+		case VALUE_NIL:
+			return 2;
+		case VALUE_NUMBER:
+			return hash_u64(v.number);
+		case VALUE_STRING:
+		case VALUE_REFERENCE:
+			return hash_string(v.string);
+		case VALUE_OBJECT:
+			// TODO
+			assert(false);
+			break;
+		case VALUE_LAMBDA:
+			return hash_ptr(v.a);
+		default:
+			assert(false);
+			return 0;
+	}
+}
+
+static bool __value_eq(Value a, Value b) {
+	return a == b;
 }
 
 void __rt_eq(Stack *stack) {
@@ -127,13 +166,8 @@ void __rt_cond_exec(Heap *heap, Scope *scope, Stack *stack) {
 
 	assert(body.type == VALUE_LAMBDA);
 
-	if(cond.type == VALUE_TRUE || 
-		cond.type == VALUE_OBJECT || 
-		cond.type == VALUE_STRING || 
-		cond.type == VALUE_REFERENCE || 
-		cond.type == VALUE_NUMBER || 
-		cond.type == VALUE_NUMBER) {
-		(*body.lambda.fn)(heap, scope, stack);
+	if(cond.is_truthy()) {
+		(*body.lambda.fn)(heap, scope->push(), stack);
 	}
 }
 
@@ -296,11 +330,20 @@ void __rt_mod(Stack *stack) {
 void __rt_newobj(Stack *stack, Heap *heap) {
 	auto v = heap->alloc();
 	v.type = VALUE_OBJECT;
-	v.object = new Hash_Table<Value, Value>(__value_hash);
+	v.object = new Hash_Table<Value, Value>(__value_hash, __value_eq);
 	stack->push(v);
 }
 
 void __rt_get_prop(Stack *stack) {
+	auto key = stack->pop();
+	auto object = stack->pop();
+
+	assert(object.type == VALUE_OBJECT);
+
+	stack->push(object.object->get(key));
+}
+
+void __rt_set_prop(Stack *stack) {
 	auto value = stack->pop();
 	auto key = stack->pop();
 	auto object = stack->pop();
@@ -310,58 +353,95 @@ void __rt_get_prop(Stack *stack) {
 	object.object->put(key, value);
 }
 
-void __rt_set_prop(Stack *stack) {
-	// TODO
-}
-
 void __rt_dup(Stack *stack) {
-	// TODO
+	stack->push(stack->data.data[stack->data.count - 1]);	
 }
 
 void __rt_drop(Stack *stack) {
-	// TODO
+	stack->pop();
 }
 
 void __rt_swap(Stack *stack) {
-	// TODO
+	auto a = stack->pop();
+	auto b = stack->pop();
+	stack->push(a);
+	stack->push(b);
 }
 
 void __rt_rot(Stack *stack) {
-	// TODO
+	auto a = stack->pop();
+	auto b = stack->pop();
+	auto c = stack->pop();
+	stack->push(a);
+	stack->push(c);
+	stack->push(b);
 }
 
 void __rt_load(Stack *stack, Scope *scope) {
-	// TODO
+	auto key = stack->pop();
+
+	assert(key.type == VALUE_REFERENCE);
+
+	stack->push(scope->get(key.string));
 }
 
-void __rt_store(Stack *stack, Scope *scope) {
-	// TODO
+void __rt_store(Heap *heap, Scope *scope, Stack *stack) {
+	auto key = stack->pop();
+	auto value = stack->pop();
+
+	assert(key.type == VALUE_REFERENCE);
+
+	auto old = scope->get(key.string);
+	
+	if(old.type) {
+		heap->unmark_root(old);
+	}
+
+	heap->mark_root(value);
+	scope->set(key.string, value);
 }
 
-void __rt_while(Stack *stack) {
-	// TODO
+void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
+	auto body = stack->pop();
+	auto cond = stack->pop();
+
+	assert(body.type == VALUE_LAMBDA);
+	assert(cond.type == VALUE_LAMBDA);
+
+	for(;;) {
+		(*cond.lambda.fn)(heap, scope, stack);
+
+		auto v = stack->pop();
+		if(!v.is_truthy()) break;
+
+		(*body.lambda.fn)(heap, scope, stack);
+	}
 }
 
 void __rt_push_true(Stack *stack) {
 	Value v;
+	v.a = 0;
 	v.type = VALUE_TRUE;
 	stack->push(v);
 }
 
 void __rt_push_false(Stack *stack) {
 	Value v;
+	v.a = 0;
 	v.type = VALUE_FALSE;
 	stack->push(v);
 }
 
 void __rt_push_nil(Stack *stack) {
 	Value v;
+	v.a = 0;
 	v.type = VALUE_NIL;
 	stack->push(v);
 }
 
 void __rt_push_number(Stack *stack, s64 n) {
 	Value v;
+	v.a = 0;
 	v.type = VALUE_NUMBER;
 	v.number = n;
 	stack->push(v);
@@ -369,15 +449,17 @@ void __rt_push_number(Stack *stack, s64 n) {
 
 void __rt_push_string(Stack *stack, char *s) {
 	Value v; // TODO: allocate on Heap?
+	v.a = 0;
 	v.type = VALUE_STRING;
 	v.string = s;
 	stack->push(v);
 }
 
-void __rt_push_reference(Stack *stack, u64 r) {
-	Value v;
+void __rt_push_reference(Stack *stack, char *r) {
+	Value v; // TODO: allocate on Heap?
+	v.a = 0;
 	v.type = VALUE_REFERENCE;
-	v.number = r;
+	v.string = r;
 	stack->push(v);
 }
 
@@ -387,4 +469,44 @@ void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn) {
 	v.lambda.j = j;
 	v.lambda.fn = fn;
 	stack->push(v);
+}
+
+void __rt_epilogue(Scope *scope, Heap *heap) {
+	scope->pop(heap);
+}
+
+void __std_print(Heap *heap, Scope *scope, Stack *stack) {
+	// TOOD: tostring
+	auto v = stack->pop();
+	switch(v.type) {
+		case VALUE_TRUE:
+			printf("true");
+			break;
+		case VALUE_FALSE:
+			printf("false");
+			break;
+		case VALUE_NIL:
+			printf("nil");
+			break;
+		case VALUE_NUMBER:
+			printf("%lli", v.number);
+			break;
+		case VALUE_STRING:
+		case VALUE_REFERENCE:
+			printf("%s", v.string);
+			break;
+		case VALUE_OBJECT:
+			// TODO
+			printf("{}");
+			break;
+		case VALUE_LAMBDA:
+			// TODO
+			printf("λ");
+			break;
+	}
+}
+
+void __std_println(Heap *heap, Scope *scope, Stack *stack) {
+	__std_print(heap, scope, stack);
+	printf("\n");
 }

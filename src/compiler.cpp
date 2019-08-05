@@ -44,6 +44,11 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 		}
 	}
 
+	jit_prepare(j);
+	jit_putargr(j, R(1));
+	jit_putargr(j, R(0));
+	jit_call(j, __rt_epilogue);
+
 	jit_reti(j, 0);
 
 #ifdef DEBUG
@@ -161,10 +166,10 @@ void Compiler::compile_instruction(jit *j, InstructionNode *n) {
 			JIT_RT_CALL_21(__rt_load);
 			break;
 		case AST_OP_STORE:
-			JIT_RT_CALL_21(__rt_store);
+			JIT_RT_CALL_012(__rt_store);
 			break;
 		case AST_OP_WHILE:
-			JIT_RT_CALL_2(__rt_while);
+			JIT_RT_CALL_012(__rt_while);
 			break;
 		default:
 			assert(false);
@@ -215,7 +220,7 @@ void Compiler::compile_constant(jit *j, ConstantNode *n) {
 #endif
 			jit_prepare(j);
 			jit_putargr(j, R(2));
-			jit_putargi(j, n->number);
+			jit_putargi(j, n->string);
 			jit_call(j, __rt_push_reference);
 			break;
 		default:

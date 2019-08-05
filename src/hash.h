@@ -32,4 +32,8 @@ inline u64 hash_string(char *str) {
     return x;
 }
 
+inline bool eq_string(char *a, char *b) {
+    return strcmp(a, b) == 0;
+}
+
 #endif
