@@ -28,9 +28,9 @@ bool Value::operator==(const Value &other) {
 		case VALUE_NIL:
 			return true;
 		case VALUE_NUMBER:
-		case VALUE_REFERENCE:
 			return number == other.number;
 			break;
+		case VALUE_REFERENCE:
 		case VALUE_STRING:
 			return strcmp(string, other.string) == 0;
 		case VALUE_OBJECT:
