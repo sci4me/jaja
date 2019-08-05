@@ -141,7 +141,7 @@ void __rt_eq(Stack *stack) {
 
 	Value c;
 	c.type = a == b ? VALUE_TRUE : VALUE_FALSE;
-	stack->set_top(v);
+	stack->set_top(c);
 }
 
 void __rt_lt(Stack *stack) {
@@ -343,10 +343,10 @@ void __rt_mod(Stack *stack) {
 }
 
 void __rt_newobj(Stack *stack, Heap *heap) {
-	auto v = heap->alloc();
-	v.type = VALUE_OBJECT;
-	v.object = new Hash_Table<Value, Value>(__value_hash, __value_eq);
-	stack->push(v);
+	auto v = ALLOC(heap);
+	v->type = VALUE_OBJECT;
+	v->object = new Hash_Table<Value, Value>(__value_hash, __value_eq);
+	stack->push(*v);
 }
 
 void __rt_get_prop(Stack *stack) {
@@ -485,11 +485,11 @@ void __rt_push_reference(Stack *stack, char *r) {
 }
 
 void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn) {
-	auto v = heap->alloc();
-	v.type = VALUE_LAMBDA;
-	v.lambda.j = j;
-	v.lambda.fn = fn;
-	stack->push(v);
+	auto v = ALLOC(heap);
+	v->type = VALUE_LAMBDA;
+	v->lambda.j = j;
+	v->lambda.fn = fn;
+	stack->push(*v);
 }
 
 void __rt_epilogue(Scope *scope, Heap *heap) {

@@ -1,10 +1,10 @@
 #include "compiler.h"
 
 Value Compiler::compile(Array<Node*>* ast) {
-	auto result = heap->alloc();
-	result.type = VALUE_LAMBDA;
-	result.lambda = compile_raw(ast);
-	return result;
+	auto result = ALLOC(heap);
+	result->type = VALUE_LAMBDA;
+	result->lambda = compile_raw(ast);
+	return *result;
 }
 
 Lambda Compiler::compile_raw(Array<Node*>* ast) {	
@@ -13,7 +13,7 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 	auto j = jit_init();	
 	result.j = j;
 
-#ifdef DEBUG
+#ifdef JIT_DEBUG
 	jit_comment(j, ">>>");
 #endif
 
@@ -44,7 +44,7 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 		}
 	}
 
-#ifdef DEBUG
+#ifdef JIT_DEBUG
 	jit_comment(j, "__rt_epilogue");
 #endif
 
@@ -55,14 +55,14 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 
 	jit_reti(j, 0);
 
-#ifdef DEBUG
+#ifdef JIT_DEBUG
 	jit_comment(j, "<<<");
 #endif
 
-	jit_check_code(j, JIT_WARN_ALL);
+	jit_check_code(j, JIT_WARN_ALL); // TODO: move into JIT_DEBUG section
 	jit_generate_code(j);
 
-#ifdef DEBUG
+#ifdef JIT_DEBUG
 	printf("ops {\n");
 	jit_dump_ops(j, JIT_DEBUG_OPS);
 	printf("}\n");
@@ -74,7 +74,7 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 void Compiler::compile_lambda(jit *j, LambdaNode *n) {
 	auto l = compile_raw(&n->body);
 
-#ifdef DEBUG
+#ifdef JIT_DEBUG
 	jit_comment(j, "__rt_push_lambda");
 #endif
 
@@ -89,7 +89,7 @@ void Compiler::compile_lambda(jit *j, LambdaNode *n) {
 #define xstr(a) str(a)
 #define str(a) #a
 
-#ifdef DEBUG
+#ifdef JIT_DEBUG
 	#define JIT_RT_CALL_2(fn) jit_comment(j, str(fn) "\n"); jit_prepare(j); jit_putargr(j, R(2)); jit_call(j, fn);
 	#define JIT_RT_CALL_20(fn) jit_comment(j, str(fn) "\n"); jit_prepare(j); jit_putargr(j, R(2)); jit_putargr(j, R(0)); jit_call(j, fn);
 	#define JIT_RT_CALL_21(fn) jit_comment(j, str(fn) "\n"); jit_prepare(j); jit_putargr(j, R(2)); jit_putargr(j, R(1)); jit_call(j, fn);
@@ -192,7 +192,7 @@ void Compiler::compile_constant(jit *j, ConstantNode *n) {
 			JIT_RT_CALL_2(__rt_push_nil);
 			break;
 		case AST_CONST_NUMBER:
-#ifdef DEBUG
+#ifdef JIT_DEBUG
 			jit_comment(j, "__rt_push_number");
 #endif
 			jit_prepare(j);
@@ -201,7 +201,7 @@ void Compiler::compile_constant(jit *j, ConstantNode *n) {
 			jit_call(j, __rt_push_number);
 			break;
 		case AST_CONST_STRING: {
-#ifdef DEBUG
+#ifdef JIT_DEBUG
 			jit_comment(j, "__rt_push_string");
 #endif
 			jit_op *skip_data = jit_jmpi(j, JIT_FORWARD);
@@ -219,7 +219,7 @@ void Compiler::compile_constant(jit *j, ConstantNode *n) {
 			break;
 		}
 		case AST_CONST_REFERENCE:
-#ifdef DEBUG
+#ifdef JIT_DEBUG
 			jit_comment(j, "__rt_push_reference");
 #endif
 			jit_prepare(j);

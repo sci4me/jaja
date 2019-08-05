@@ -5,7 +5,7 @@
 #include "runtime.h"
 #include "gc.h"
 
-// #define DEBUG
+// #define JIT_DEBUG
 
 struct Compiler {
 	Heap *heap;

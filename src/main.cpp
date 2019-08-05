@@ -37,5 +37,7 @@ s32 main(s32 argc, char **argv) {
 	
 	(*main.lambda.fn)(&heap, &G, &stack);
 
+	heap.gc();
+
 	return 0;
 }

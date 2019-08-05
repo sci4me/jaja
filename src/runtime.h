@@ -17,6 +17,14 @@ extern "C" {
 #define VALUE_OBJECT 6
 #define VALUE_LAMBDA 7
 
+#define HEAP_DEBUG
+
+#ifdef HEAP_DEBUG
+	#define ALLOC(h) h->alloc(__LINE__, __func__, __FILE__)
+#else
+	#define ALLOC(h) h->alloc();
+#endif
+
 struct Heap;
 struct Allocation;
 struct Scope;
@@ -51,19 +59,31 @@ struct Allocation {
 	Allocation *next;
 	bool marked;
 	Value value;
+
+#ifdef HEAP_DEBUG
+	u32 line;
+	const char *func;
+	const char *file;
+#endif
+
+	Allocation() : next(0) {}
 };
 
 struct Heap {
 	Allocation *head;
 	Array<Value> roots;
 
-	Value alloc();
+#ifdef HEAP_DEBUG
+	Value* alloc(u32 line, const char *func, const char *file);
+#else
+	Value* alloc();
+#endif
 	void mark_root(Value v);
 	void unmark_root(Value v);
 	void gc();
 
-	void mark(Value value);
-	void sweep();
+	u32 mark(Value value);
+	u32 sweep();
 };
 
 struct Stack {

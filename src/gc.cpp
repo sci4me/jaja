@@ -1,41 +1,67 @@
 #include "runtime.h"
 
-Value Heap::alloc() {
+#ifdef HEAP_DEBUG
+Value* Heap::alloc(u32 line, const char *func, const char *file) {
+#else
+Value* Heap::alloc() {
+#endif
 	auto a = new Allocation();
+	printf("alloc a: %p\n", a);
 	a->next = head;
 	a->value.a = a;
 	head = a;
-	return a->value;
+#ifdef HEAP_DEBUG
+	a->line = line;
+	a->func = func;
+	a->file = file;
+#endif
+	return &a->value;
 }
 
 void Heap::mark_root(Value v) {
+	if(!v.a) return;
+
 	roots.add(v);
 }
 
 void Heap::unmark_root(Value v) {
+	if(!v.a) return;
+
 	auto i = roots.index_of(v);
 	if(i != -1)	roots.unordered_remove(i);
 }
 
 void Heap::gc() {
+	u32 total = roots.count;
+	u32 marked = 0;
+
 	FOR((&roots), i) {
-		mark(roots.data[i]);
+		auto root = roots.data[i];
+		marked += mark(root);
 	}
-	sweep();
+	u32 swept = sweep();
+
+	printf("\nGC Cycle:\n\tmarked: %u\n\tswept:  %u\n\ttotal:  %u\n", marked, swept, total);
 }
 
-void Heap::mark(Value v) {
+u32 Heap::mark(Value v) {
 	v.a->marked = true;
+
+	u32 marked = 1;
 
 	if(v.type == VALUE_OBJECT) {
 		for(u32 i = 0; i < v.object->count; i++) {
-			mark(v.object->keys[i]);
-			mark(v.object->values[i]);
+			marked += mark(v.object->keys[i]);
+			marked += mark(v.object->values[i]);
 		} 
 	}
+
+	return marked;
 }
 
-void Heap::sweep() {
+u32 Heap::sweep() {
+	u32 swept = 0;
+	Array<Allocation*> to_delete; // TODO HACK REMOVEME
 	Allocation *prev = NULL;
 	for(Allocation *curr = head; curr; prev = curr, curr = curr->next) {
 		if(curr->marked) continue;
@@ -44,8 +70,16 @@ void Heap::sweep() {
 			prev->next = curr->next;
 		} else {
 			head = curr->next;
-
-			delete curr;
 		}
+
+		printf("sweeping %d (%d) : %s@%s:%d\n", curr->value.type, curr->marked, curr->func, curr->file, curr->line);
+
+		printf("delete a: %p\n", curr);
+		to_delete.add(curr);
+		swept++;
 	}	
+	FOR((&to_delete), i) {
+		delete to_delete.data[i];
+	}
+	return swept;
 }
