@@ -46,11 +46,21 @@ void Stack::push(Value v) {
 }
 
 Value Stack::pop() {
-	assert(data.count - 1 >= 0);
+	assert(data.count > 0);
 	auto i = data.count - 1;
 	auto v = data.data[i];
 	assert(data.unordered_remove(i));
 	return v;
+}
+
+Value Stack::peek() {
+	assert(data.count > 0);
+	return data.data[data.count - 1];
+}
+
+void Stack::set_top(Value v) {
+	assert(data.count > 0);
+	data.data[data.count - 1] = v;
 }
 
 void Scope::set(char *key, Value value) {
@@ -127,16 +137,16 @@ static bool __value_eq(Value a, Value b) {
 
 void __rt_eq(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 	c.type = a == b ? VALUE_TRUE : VALUE_FALSE;
-	stack->push(c);
+	stack->set_top(v);
 }
 
 void __rt_lt(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 
@@ -146,12 +156,12 @@ void __rt_lt(Stack *stack) {
 		assert(false);
 	}
 
-	stack->push(c);
+	stack->set_top(c);
 }
 
 void __rt_gt(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 
@@ -162,7 +172,7 @@ void __rt_gt(Stack *stack) {
 		assert(false);
 	}
 
-	stack->push(c);
+	stack->set_top(c);
 }
 
 void __rt_cond_exec(Heap *heap, Scope *scope, Stack *stack) {
@@ -186,7 +196,7 @@ void __rt_exec(Heap *heap, Scope *scope, Stack *stack) {
 
 void __rt_and(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 
@@ -199,12 +209,12 @@ void __rt_and(Stack *stack) {
 		assert(false);
 	}
 
-	stack->push(c);
+	stack->set_top(c);
 }
 
 void __rt_or(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 
@@ -217,11 +227,11 @@ void __rt_or(Stack *stack) {
 		assert(false);
 	}
 
-	stack->push(c);
+	stack->set_top(c);
 }
 
 void __rt_not(Stack *stack) {
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 
@@ -233,12 +243,12 @@ void __rt_not(Stack *stack) {
 		assert(false);
 	}
 
-	stack->push(c);
+	stack->set_top(c);
 }
 
 void __rt_add(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 
@@ -250,12 +260,12 @@ void __rt_add(Stack *stack) {
 		assert(false);
 	}
 
-	stack->push(c);
+	stack->set_top(c);
 }
 
 void __rt_sub(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 
@@ -266,12 +276,12 @@ void __rt_sub(Stack *stack) {
 		assert(false);
 	}
 
-	stack->push(c);
+	stack->set_top(c);
 }
 
 void __rt_mul(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 
@@ -282,12 +292,12 @@ void __rt_mul(Stack *stack) {
 		assert(false);
 	}
 
-	stack->push(c);
+	stack->set_top(c);
 }
 
 void __rt_div(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 
@@ -298,11 +308,11 @@ void __rt_div(Stack *stack) {
 		assert(false);
 	}
 
-	stack->push(c);
+	stack->set_top(c);
 }
 
 void __rt_neg(Stack *stack) {
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 
@@ -313,12 +323,12 @@ void __rt_neg(Stack *stack) {
 		assert(false);
 	}
 
-	stack->push(c);
+	stack->set_top(c);
 }
 
 void __rt_mod(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->pop();
+	auto a = stack->peek();
 
 	Value c;
 
@@ -329,7 +339,7 @@ void __rt_mod(Stack *stack) {
 		assert(false);
 	}
 
-	stack->push(c);
+	stack->set_top(c);
 }
 
 void __rt_newobj(Stack *stack, Heap *heap) {
@@ -345,7 +355,13 @@ void __rt_get_prop(Stack *stack) {
 
 	assert(object.type == VALUE_OBJECT);
 
-	stack->push(object.object->get(key));
+	if(object.object->contains(key)) {
+		stack->push(object.object->get(key));
+	} else {
+		Value v;
+		v.type = VALUE_NIL;
+		stack->push(v);
+	}
 }
 
 void __rt_set_prop(Stack *stack) {

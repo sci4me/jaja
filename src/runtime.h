@@ -40,7 +40,7 @@ struct Value {
 		Lambda lambda;
 	};
 
-	Value() {}
+	Value() : a(0) {}
 
 	bool is_truthy();
 
@@ -71,6 +71,8 @@ struct Stack {
 
 	void push(Value v);
 	Value pop();
+	Value peek();
+	void set_top(Value v);
 };
 
 struct Scope {
