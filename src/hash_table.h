@@ -101,6 +101,21 @@ _return_zero:
         return x;
     }
 
+    bool contains(K key) {
+        u64 index = hash_fn(key) % size;
+        for(;;) {
+            index &= (size - 1);
+            if(state[index] == HT_STATE_OCCUPIED && eq_fn(keys[index], key)) {
+                return true;
+            } else if(state[index] == HT_STATE_EMPTY) {
+                return false;
+            }
+            index++;
+        }
+
+        return false;
+    }
+
     bool remove(K key) {
         u64 index = hash_fn(key) % size;
         for(;;) {

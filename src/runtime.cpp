@@ -54,11 +54,36 @@ Value Stack::pop() {
 }
 
 void Scope::set(char *key, Value value) {
+	Scope *curr = this;
+	while(curr) {
+		if(curr->contains(key)) {
+			curr->values.put(key, value);			
+			return;
+		}
+
+		curr = curr->parent;
+	}
+
 	values.put(key, value);
 }
 
 Value Scope::get(char *key) {
-	return values.get(key);
+	Scope *curr = this;
+	while(curr) {
+		if(curr->contains(key)) {
+			return curr->values.get(key);
+		}
+
+		curr = curr->parent;
+	}
+
+	Value v;
+	v.type = VALUE_NIL;
+	return v;
+}
+
+bool Scope::contains(char *key) {
+	return values.contains(key);
 }
 
 Scope* Scope::push() {
@@ -105,27 +130,7 @@ void __rt_eq(Stack *stack) {
 	auto a = stack->pop();
 
 	Value c;
-
-	if((a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) || (a.type == VALUE_REFERENCE && b.type == VALUE_REFERENCE)) {
-		c.type = a.number == b.number ? VALUE_TRUE : VALUE_FALSE;
-	} else if(a.type == VALUE_STRING && b.type == VALUE_STRING) {
-		if(strcmp(a.string, b.string) == 0) {
-			c.type = VALUE_TRUE;
-		} else {
-			c.type = VALUE_FALSE;
-		}
-	} else if((a.type == VALUE_TRUE && b.type == VALUE_TRUE) || (a.type == VALUE_FALSE && b.type == VALUE_FALSE) || (a.type == VALUE_NIL && b.type == VALUE_NIL)) {
-		c.type = VALUE_TRUE;
-	} else if(a.type == VALUE_OBJECT && b.type == VALUE_OBJECT) {
-		// TODO
-		assert(false);
-	} else if(a.type == VALUE_LAMBDA && b.type == VALUE_LAMBDA) {
-		// TODO
-		assert(false);
-	} else {
-		assert(false);
-	}
-
+	c.type = a == b ? VALUE_TRUE : VALUE_FALSE;
 	stack->push(c);
 }
 

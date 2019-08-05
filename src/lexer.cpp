@@ -188,12 +188,21 @@ void Lexer::find_next_token() {
  			emit(TokenType::WHILE);
  			break;
 
- 		case '{':
- 			while(more() && peek() != '}') {
+ 		case '{': {
+ 			u32 k = 1;
+ 			while(k > 0 && more()) {
+ 				switch(peek()) {
+ 					case '{':
+ 						k++;
+ 						break;
+ 					case '}':
+ 						k--;
+ 						break;
+ 				}
  				next();
  			}
 
- 			if(!more() || next() != '}') {
+ 			if(k != 0) {
  				// TODO handle this
  				fprintf(stderr, "Unclosed comment\n");
  				exit(1);
@@ -201,6 +210,7 @@ void Lexer::find_next_token() {
 
  			rescan = true;
  			break;
+ 		}
 
  		case '"': {
  			u32 start = curr;

@@ -84,6 +84,7 @@ struct Scope {
 
 	void set(char *key, Value value);
 	Value get(char *key);
+	bool contains(char *key);
 };
 
 void __rt_eq(Stack *stack);

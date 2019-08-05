@@ -13,3 +13,42 @@
 ]#
 }
 
+{
+[
+	cb:
+	node:
+
+	node;cb;!
+
+	node;"left".nil=~[node;$"left".cb;visit;!node:]?
+	{node;"right".nil=~[node;$"right".cb;visit;!node:]?}
+]visit:
+
+\d: d; "value" 4 , 
+\e: e; "value" 5 , 
+\f: f; "value" 6 , 
+\g: g; "value" 7 , 
+
+\b: b; "value" 2 , b;"left"d;, b;"right"e;,
+\c: c; "value" 3 , c;"left"f;, c;"right"g;,
+
+\a: a; "value" 1 , a;"left"b;, a;"right"c;,
+
+a; [
+	{
+	n:
+	n;"left".nil=~[n;"left". "parent" n; , n;]?
+	n;"right".nil=~[n;"right". "parent" n; , n;]?
+	}
+] visit;!
+
+a; [
+	"value: "print;!
+	$"value".println;!
+
+	"parent".nil=~[
+		"parent value: "print;!
+		"parent".println;!	
+	]?
+] visit;!
+}
