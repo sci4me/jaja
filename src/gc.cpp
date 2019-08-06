@@ -5,6 +5,10 @@ Value* Heap::alloc(u32 line, const char *func, const char *file) {
 #else
 Value* Heap::alloc() {
 #endif
+	if(allocations > 1000) {
+		gc();
+	}
+
 	auto a = new Allocation();
 	// printf("alloc a: %p : %s@%s:%d\n", a, func, file, line);
 	a->next = head;
@@ -21,12 +25,14 @@ Value* Heap::alloc() {
 
 void Heap::mark_root(Value v) {
 	if(!v.a) return;
+	assert(v.a->next != v.a);
 
 	roots.add(v);
 }
 
 void Heap::unmark_root(Value v) {
 	if(!v.a) return;
+	assert(v.a->next != v.a);
 
 	auto i = roots.index_of(v);
 	if(i != -1)	roots.unordered_remove(i);
@@ -43,11 +49,12 @@ void Heap::gc() {
 	u32 swept = sweep();
 	allocations -= swept;
 
-	printf("\nGC Cycle:\n\tmarked: %u\n\tswept:  %u\n\tmissing: %u\n\ttotal:  %u\n", marked, swept, total - (marked + swept), total);
+	printf("\nGC Cycle:\n\tstart:  %u\n\tmarked: %u\n\tswept:  %u\n\tmissing: %u\n\tend: %u\n", total, marked, swept, total - (marked + swept), allocations);
 }
 
 u32 Heap::mark(Value v) {
 	if(!v.a) return 0;
+	assert(v.a->next != v.a);
 
 	v.a->marked = true;
 
@@ -64,25 +71,29 @@ u32 Heap::mark(Value v) {
 }
 
 u32 Heap::sweep() {
-	u32 swept = 0;
 	Array<Allocation*> to_delete; // TODO HACK REMOVEME
 	Allocation *prev = NULL;
 	for(Allocation *curr = head; curr; prev = curr, curr = curr->next) {
+		assert(curr->next != curr);
+
 		if(curr->marked) continue;
 
+		auto next = curr->next;
 		if(prev) {
-			prev->next = curr->next;
+			assert(prev != next);
+			prev->next = next;
 		} else {
-			head = curr->next;
+			head = next;
 		}
 
 		// printf("sweeping %d (%d) : %s@%s:%d\n", curr->value.type, curr->marked, curr->func, curr->file, curr->line);
 
 		to_delete.add(curr);
-		swept++;
 	}	
 	FOR((&to_delete), i) {	
+		// TODO: this is wrong
 		delete to_delete.data[i];
 	}
-	return swept;
+
+	return to_delete.count;
 }

@@ -1,3 +1,9 @@
+{
+this program demonstrates why we _REALLY_ need to do if/while optimizations
+this program will allocate over 100k lambdas on the heap #notcool
+we can detect if statements as a lambda followed by the if instruction (?),
+and instead of compiling a lambda for the if body, just compile the code in directly
+}
 
 [$2%0=$[^2/^]?~[3*1+]?]collatz:
 [n:0s:[n;1=~][n;collatz;!n:s;1+s:]#s;]steps:
@@ -12,8 +18,8 @@
     1+
 ]#
 
-""println;!
 
+{
 [
 	cb:
 	node:
@@ -49,3 +55,4 @@ a; [
 		"parent".println;!	
 	]?
 ] visit;!
+}

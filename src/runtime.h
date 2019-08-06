@@ -70,9 +70,9 @@ struct Allocation {
 };
 
 struct Heap {
-	Allocation *head;
+	Allocation *head = NULL;
 	Array<Value> roots;
-	u32 allocations;
+	u32 allocations = 0;
 
 #ifdef HEAP_DEBUG
 	Value* alloc(u32 line, const char *func, const char *file);
