@@ -6,10 +6,11 @@ Value* Heap::alloc(u32 line, const char *func, const char *file) {
 Value* Heap::alloc() {
 #endif
 	auto a = new Allocation();
-	printf("alloc a: %p\n", a);
+	// printf("alloc a: %p : %s@%s:%d\n", a, func, file, line);
 	a->next = head;
 	a->value.a = a;
 	head = a;
+	allocations++;
 #ifdef HEAP_DEBUG
 	a->line = line;
 	a->func = func;
@@ -32,7 +33,7 @@ void Heap::unmark_root(Value v) {
 }
 
 void Heap::gc() {
-	u32 total = roots.count;
+	u32 total = allocations;
 	u32 marked = 0;
 
 	FOR((&roots), i) {
@@ -40,11 +41,14 @@ void Heap::gc() {
 		marked += mark(root);
 	}
 	u32 swept = sweep();
+	allocations -= swept;
 
-	printf("\nGC Cycle:\n\tmarked: %u\n\tswept:  %u\n\ttotal:  %u\n", marked, swept, total);
+	printf("\nGC Cycle:\n\tmarked: %u\n\tswept:  %u\n\tmissing: %u\n\ttotal:  %u\n", marked, swept, total - (marked + swept), total);
 }
 
 u32 Heap::mark(Value v) {
+	if(!v.a) return 0;
+
 	v.a->marked = true;
 
 	u32 marked = 1;
@@ -72,13 +76,12 @@ u32 Heap::sweep() {
 			head = curr->next;
 		}
 
-		printf("sweeping %d (%d) : %s@%s:%d\n", curr->value.type, curr->marked, curr->func, curr->file, curr->line);
+		// printf("sweeping %d (%d) : %s@%s:%d\n", curr->value.type, curr->marked, curr->func, curr->file, curr->line);
 
-		printf("delete a: %p\n", curr);
 		to_delete.add(curr);
 		swept++;
 	}	
-	FOR((&to_delete), i) {
+	FOR((&to_delete), i) {	
 		delete to_delete.data[i];
 	}
 	return swept;
