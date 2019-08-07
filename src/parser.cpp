@@ -123,7 +123,7 @@ LambdaNode* Parser::parse_lambda() {
 		if(lexer.get_token().type == LAMBDA_END) {
 			break;
 		} else {
-			result->body.add(parse_any());
+			result->body.push(parse_any());
 		}
 	}
 
@@ -142,7 +142,7 @@ Array<Node*>* Parser::parse() {
 	auto result = new Array<Node*>();
 
 	while(lexer.has_token()) {
-		result->add(parse_any());
+		result->push(parse_any());
 	}
 
 	return result;	

@@ -42,15 +42,11 @@ bool Value::operator==(const Value &other) {
 }
 
 void Stack::push(Value v) {
-	data.add(v);
+	data.push(v);
 }
 
 Value Stack::pop() {
-	assert(data.count > 0);
-	auto i = data.count - 1;
-	auto v = data.data[i];
-	assert(data.unordered_remove(i));
-	return v;
+	return data.pop();
 }
 
 Value Stack::peek() {
@@ -101,8 +97,9 @@ Scope* Scope::push() {
 }
 
 void Scope::pop(Heap *heap) {
-	for(u32 i = 0; i < values.count; i++) {
-		heap->unmark_root(values.values[i]);
+	FOR((&values), i) {
+		auto v = values.values[i];
+		if(v.a) heap->unmark_root(v.a);
 	}
 }
 
@@ -414,11 +411,9 @@ void __rt_store(Heap *heap, Scope *scope, Stack *stack) {
 
 	auto old = scope->get(key.string);
 	
-	if(old.type) {
-		heap->unmark_root(old);
-	}
+	if(old.a) heap->unmark_root(old.a);
+	if(value.a)	heap->mark_root(value.a);
 
-	heap->mark_root(value);
 	scope->set(key.string, value);
 }
 

@@ -97,7 +97,7 @@ struct Hash_Table {
 
 _return_zero:
         V x;
-        memset(&x, 0, sizeof(x));
+        memset(&x, 0, sizeof(V));
         return x;
     }
 

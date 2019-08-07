@@ -27,7 +27,7 @@ s32 main(s32 argc, char **argv) {
 	auto compiler = Compiler(&heap);
 	
 	auto main = compiler.compile(ast);
-	heap.mark_root(main);
+	heap.mark_root(main.a);
 	
 	auto G = Scope(NULL);
 

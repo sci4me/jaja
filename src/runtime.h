@@ -56,7 +56,7 @@ struct Value {
 };
 
 struct Allocation {
-	Allocation *next;
+	// Allocation *next;
 	bool marked;
 	Value value;
 
@@ -66,24 +66,32 @@ struct Allocation {
 	const char *file;
 #endif
 
-	Allocation() : next(0) {}
+#ifdef HEAP_DEBUG
+	Allocation(u32 _line, const char *_func, const char *_file) : marked(false), line(_line), func(_func), file(_file) {
+		assert(_func);
+		assert(_file);
+	}
+#else
+	Allocation() : /*next(0),*/ marked(false) {}
+#endif
 };
 
 struct Heap {
-	Allocation *head = NULL;
-	Array<Value> roots;
-	u32 allocations = 0;
+	// Allocation *head = NULL;
+	Array<Allocation*> allocations;
+	Array<Allocation*> _allocations;
+	Array<Allocation*> roots;
 
 #ifdef HEAP_DEBUG
 	Value* alloc(u32 line, const char *func, const char *file);
 #else
 	Value* alloc();
 #endif
-	void mark_root(Value v);
-	void unmark_root(Value v);
+	void mark_root(Allocation *a);
+	void unmark_root(Allocation *a);
 	void gc();
 
-	u32 mark(Value value);
+	u32 mark(Allocation *a);
 	u32 sweep();
 };
 

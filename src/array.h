@@ -2,6 +2,7 @@
 #define ARRAY_H
 
 #include <stdlib.h>
+#include <assert.h>
 
 #include "types.h"
 
@@ -13,11 +14,7 @@ struct Array {
 	u32 count;
 	T *data;
 
-	Array() {
-		size = 16;
-		count = 0;
-		data = 0;
-	}
+	Array() : Array(16) {}
 
 	Array(u64 capacity) {
 		size = capacity;
@@ -33,13 +30,8 @@ struct Array {
 		count = 0;
 	}
 
-	void add(T value) {
-		if(data == 0) {
-			data = (T*) calloc(size, sizeof(T));
-		}
-
+	void push(T value) {
 		if(count >= size - 1) {
-			u32 old_size = size;
 			size *= 2;
 			data = (T*) realloc(data, size * sizeof(T));
 		}
@@ -47,15 +39,19 @@ struct Array {
 		data[count++] = value;
 	}
 
+	T pop() {
+		assert(count > 0);
+		auto v = data[count - 1];
+		count--;
+		return v;
+	}
+
 	bool unordered_remove(u32 index) {
 		if(index >= count) return false;
 
-		auto v = data[count - 1];
-		count--;
-
+		auto v = pop();
 		if(index < count) {
-			auto tmp = data[index];
-			data[index]  = v;
+			data[index] = v;
 		}
 
 		return true;
