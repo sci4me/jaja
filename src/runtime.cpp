@@ -180,8 +180,10 @@ void __rt_cond_exec(Heap *heap, Scope *scope, Stack *stack) {
 
 	if(cond.is_truthy()) {
 		auto s = scope->push();
+		if(body.a) heap->mark_root(body.a);
 		(*body.lambda.fn)(heap, s, stack);
-		delete s;
+		if(body.a) heap->unmark_root(body.a);
+		delete s; // TODO remove new/delete entirely
 	}
 }
 
@@ -190,7 +192,9 @@ void __rt_exec(Heap *heap, Scope *scope, Stack *stack) {
 
 	assert(lambda.type == VALUE_LAMBDA);
 
+	if(lambda.a) heap->mark_root(lambda.a);
 	(*lambda.lambda.fn)(heap, scope, stack);
+	if(lambda.a) heap->unmark_root(lambda.a);
 }
 
 void __rt_and(Stack *stack) {
@@ -426,6 +430,9 @@ void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
 	assert(body.type == VALUE_LAMBDA);
 	assert(cond.type == VALUE_LAMBDA);
 
+	if(body.a) heap->mark_root(body.a);
+	if(cond.a) heap->mark_root(cond.a);
+
 	for(;;) {
 		(*cond.lambda.fn)(heap, scope, stack);
 
@@ -434,6 +441,9 @@ void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
 
 		(*body.lambda.fn)(heap, scope, stack);
 	}
+
+	if(body.a) heap->unmark_root(body.a);
+	if(cond.a) heap->unmark_root(cond.a);
 }
 
 void __rt_push_true(Stack *stack) {

@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "runtime.h"
 
 static void free_allocation(Allocation *a) {
@@ -6,19 +8,19 @@ static void free_allocation(Allocation *a) {
 		case VALUE_REFERENCE:
 			break;
 		case VALUE_OBJECT:
-			// delete a->value.object;
+			delete a->value.object;
 			break;
 		case VALUE_LAMBDA:
 			// jit_free(a->value.lambda.j);
 			break;
 	}
 
-	delete a;
+	free(a);
 }
 
 Heap::~Heap() {
 	FOR((&allocations), i) {
-		free_allocation(allocations.data[i]);	
+		free_allocation(allocations.pop());	
 	}
 }
 
@@ -28,16 +30,18 @@ Value* Heap::alloc(u32 line, const char *func, const char *file) {
 Value* Heap::alloc() {
 #endif
 	if(allocations.count > 1000) {
-		// gc();
+		gc();
 	}
 
+	auto a = (Allocation*) malloc(sizeof(Allocation));
 #ifdef HEAP_DEBUG
-	auto a = new Allocation(line, func, file);
-#else
-	auto a = new Allocation();
+	a->line = line;
+	a->func = func;
+	a->file = file;
 #endif
 	// printf("alloc a: %p : %s@%s:%d\n", a, func, file, line);
 	// a->next = head;
+	a->marked = false;
 	a->value.a = a;
 	// head = a;
 	allocations.push(a);
@@ -50,7 +54,8 @@ void Heap::mark_root(Allocation *a) {
 
 	// assert(v.a->next != v.a);
 
-	roots.push(a);
+	// TODO should we really allow this if statement?
+	if(roots.index_of(a) == -1) roots.push(a);
 }
 
 void Heap::unmark_root(Allocation *a) {
@@ -117,31 +122,22 @@ u32 Heap::mark(Allocation *a) {
 }
 
 u32 Heap::sweep() {
-	u32 swept = 0;
-
+	Array<Allocation*> to_remove;
 	FOR((&allocations), i) {
 		auto x = allocations.data[i];
 		if(x->marked) {
-			_allocations.push(x);
+			x->marked = false;
 		} else {
-			swept++;
-			free_allocation(x);
+			to_remove.push(x);
 		}
 	}
-
-	{
-		u8 tmp[sizeof(Array<Allocation>)];
-		memcpy(&tmp, &allocations, sizeof(Array<Allocation>));
-		memcpy(&allocations, &_allocations, sizeof(Array<Allocation>));
-		memcpy(&_allocations, &tmp, sizeof(Array<Allocation>));		
+	FOR((&to_remove), i) {
+		auto x = to_remove.data[i];
+		allocations.unordered_remove(allocations.index_of(x));
+		free_allocation(x);
 	}
 
-	FOR((&roots), i) {
-		auto x = roots.data[i];
-		assert(allocations.index_of(x) != -1);
-	}
-
-	return swept;
+	return to_remove.count;
 
 	/*
 	Array<Allocation*> to_remove;

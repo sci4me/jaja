@@ -65,21 +65,11 @@ struct Allocation {
 	const char *func;
 	const char *file;
 #endif
-
-#ifdef HEAP_DEBUG
-	Allocation(u32 _line, const char *_func, const char *_file) : marked(false), line(_line), func(_func), file(_file) {
-		assert(_func);
-		assert(_file);
-	}
-#else
-	Allocation() : /*next(0),*/ marked(false) {}
-#endif
 };
 
 struct Heap {
 	// Allocation *head = NULL;
 	Array<Allocation*> allocations;
-	Array<Allocation*> _allocations;
 	Array<Allocation*> roots;
 
 	~Heap();
