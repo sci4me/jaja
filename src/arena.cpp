@@ -1,12 +1,11 @@
-#include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
 
 #include "arena.h"
 
-Arena::Arena(u64 _block_size) : block_size(_block_size), block_count(1) {
-	head = (Block*) malloc(sizeof(Block));
-	head->data = (u8*) malloc(_block_size);
+Arena::Arena(Allocator _allocator, u64 _block_size) : allocator(_allocator), block_size(_block_size), block_count(1) {
+	head = (Block*) ALLOC(allocator, sizeof(Block));
+	head->data = (u8*) ALLOC(allocator, _block_size);
 	head->next = NULL;
 	head->used = 0;
 }
@@ -16,8 +15,8 @@ Arena::~Arena() {
 	while(curr) {
 		auto next = curr->next;
 
-		free(curr->data);
-		free(curr);
+		FREE(allocator, curr->data);
+		FREE(allocator, curr);
 
 		curr = next;
 	}
@@ -26,8 +25,8 @@ Arena::~Arena() {
 u8* Arena::alloc(u64 n) {
 	auto left = block_size - head->used;
 	if(n > left) {
-		auto next = (Block*) malloc(sizeof(Block));
-		next->data = (u8*) malloc(block_size);
+		auto next = (Block*) ALLOC(allocator, sizeof(Block));
+		next->data = (u8*) ALLOC(allocator, block_size);
 		next->next = head;
 		next->used = 0;
 		head = next;
@@ -51,4 +50,18 @@ void Arena::reset() {
 	head = last;
 
 	// TODO: are we gonna leak memory here? (yes..)
+}
+
+static void* __alloc(void *data, unsigned long int n) {
+	return static_cast<Arena*>(data)->alloc(n);
+}
+
+static void __free(void *data, void *) {}
+
+Allocator Arena::as_allocator() {
+	return {
+		.data = this,
+		.alloc = __alloc,
+		.free = __free
+	};
 }

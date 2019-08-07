@@ -342,7 +342,7 @@ void __rt_mod(Stack *stack) {
 }
 
 void __rt_newobj(Stack *stack, Heap *heap) {
-	auto v = ALLOC(heap);
+	auto v = GC_ALLOC(heap);
 	v->type = VALUE_OBJECT;
 	v->object = new Hash_Table<Value, Value>(__value_hash, __value_eq);
 	stack->push(*v);
@@ -482,7 +482,7 @@ void __rt_push_reference(Stack *stack, char *r) {
 }
 
 void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn) {
-	auto v = ALLOC(heap);
+	auto v = GC_ALLOC(heap);
 	v->type = VALUE_LAMBDA;
 	v->lambda.j = j;
 	v->lambda.fn = fn;

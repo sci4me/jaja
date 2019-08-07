@@ -1,7 +1,6 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include <stdlib.h>
 #include <assert.h>
 
 #include "types.h"
@@ -19,11 +18,11 @@ struct Array {
 	Array(Allocator _allocator = cstdlib_allocator) : allocator(_allocator) {
 		size = 16;
 		count = 0;
-		data = NULL;
+		data = 0;
 	}
 
 	~Array() {
-		allocator.free(allocator.data, data);
+		FREE(allocator, data);
 	}
 
 	void clear() {
@@ -31,14 +30,17 @@ struct Array {
 	}
 
 	void push(T value) {
-		if(data == NULL) {
-			data = (T*) allocator.alloc(allocator.data, size * sizeof(T));
-			// data = (T*) calloc(size, sizeof(T));
+		if(data == 0) {
+			data = (T*) ALLOC(allocator, size * sizeof(T));
 		}
 
 		if(count >= size - 1) {
+			auto old_size = size;
 			size *= 2;
-			data = (T*) allocator.realloc(allocator.data, data, size * sizeof(T));
+			auto new_data = (T*) ALLOC(allocator, size * sizeof(T));
+			memcpy(new_data, data, old_size * sizeof(T));
+			FREE(allocator, data);
+			data = new_data;
 		}
 
 		data[count++] = value;

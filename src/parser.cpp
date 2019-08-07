@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "parser.h"
 
@@ -182,6 +183,7 @@ Node* Parser::parse_any() {
 LambdaNode* Parser::parse_lambda() {
 	AST_NEW_LAMBDA(result)
 	result->body = Array<Node*>();
+	result->body.allocator = arena->as_allocator();
 
 	while(lexer.has_token()) {
 		if(lexer.get_token().type == LAMBDA_END) {
@@ -205,6 +207,7 @@ LambdaNode* Parser::parse_lambda() {
 Array<Node*>* Parser::parse() {
 	auto result = (Array<Node*>*) arena->alloc(sizeof(Array<Node*>));
 	*result = Array<Node*>();
+	result->allocator = arena->as_allocator();
 
 	while(lexer.has_token()) {
 		result->push(parse_any());

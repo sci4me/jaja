@@ -20,9 +20,9 @@ extern "C" {
 #define HEAP_DEBUG
 
 #ifdef HEAP_DEBUG
-	#define ALLOC(h) h->alloc(__LINE__, __func__, __FILE__)
+	#define GC_ALLOC(h) h->alloc(__LINE__, __func__, __FILE__)
 #else
-	#define ALLOC(h) h->alloc();
+	#define GC_ALLOC(h) h->alloc();
 #endif
 
 struct Heap;

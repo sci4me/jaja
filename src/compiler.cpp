@@ -1,7 +1,7 @@
 #include "compiler.h"
 
 Value Compiler::compile(Array<Node*>* ast) {
-	auto result = ALLOC(heap);
+	auto result = GC_ALLOC(heap);
 	result->type = VALUE_LAMBDA;
 	result->lambda = compile_raw(ast);
 	return *result;
