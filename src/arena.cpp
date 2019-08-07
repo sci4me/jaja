@@ -23,6 +23,8 @@ Arena::~Arena() {
 }
 
 u8* Arena::alloc(u64 n) {
+	// TODO: alignment
+	
 	auto left = block_size - head->used;
 	if(n > left) {
 		auto next = (Block*) ALLOC(allocator, sizeof(Block));

@@ -4,12 +4,12 @@
 
 #include "parser.h"
 
-#define AST_NEW(type) (type*) arena->alloc(sizeof(type))
+#define AST_NEW(type) (type*) ALLOC(allocator, sizeof(type))
 #define AST_NEW_CONSTANT(name) auto name = AST_NEW(ConstantNode); name->node_type = NODE_CONSTANT;
 #define AST_NEW_INSTRUCTION(name) auto name = AST_NEW(InstructionNode); name->node_type = NODE_INSTRUCTION;
 #define AST_NEW_LAMBDA(name) auto name = AST_NEW(LambdaNode); name->node_type = NODE_LAMBDA;
 
-Parser::Parser(Arena *_arena, char *file, char *source) : arena(_arena), lexer(Lexer(_arena, file, source)) {
+Parser::Parser(Allocator _allocator, char *file, char *source) : allocator(_allocator), lexer(Lexer(_allocator, file, source)) {
 }
 
 Node* Parser::parse_any() {
@@ -183,7 +183,7 @@ Node* Parser::parse_any() {
 LambdaNode* Parser::parse_lambda() {
 	AST_NEW_LAMBDA(result)
 	result->body = Array<Node*>();
-	result->body.allocator = arena->as_allocator();
+	result->body.allocator = allocator;
 
 	while(lexer.has_token()) {
 		if(lexer.get_token().type == LAMBDA_END) {
@@ -205,9 +205,9 @@ LambdaNode* Parser::parse_lambda() {
 }
 
 Array<Node*>* Parser::parse() {
-	auto result = (Array<Node*>*) arena->alloc(sizeof(Array<Node*>));
+	auto result = (Array<Node*>*) ALLOC(allocator, sizeof(Array<Node*>));
 	*result = Array<Node*>();
-	result->allocator = arena->as_allocator();
+	result->allocator = allocator;
 
 	while(lexer.has_token()) {
 		result->push(parse_any());

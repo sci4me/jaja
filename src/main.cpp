@@ -22,7 +22,7 @@ s32 main(s32 argc, char **argv) {
 	}
 
 	auto parser_arena = Arena();
-	auto p = Parser(&parser_arena, argv[1], source);
+	auto p = Parser(parser_arena.as_allocator(), argv[1], source);
 	auto ast = p.parse();
 	free(source);
 

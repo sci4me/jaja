@@ -4,12 +4,11 @@
 #include "lexer.h"
 #include "array.h"
 #include "ast.h"
-#include "arena.h"
-
+#include "allocator.h"
 
 struct Parser {
 private:
-	Arena *arena;
+	Allocator allocator;
 	Lexer lexer;
 
 	Node* parse_any();
@@ -17,7 +16,7 @@ private:
 	LambdaNode* parse_lambda();
 
 public:
-	Parser(Arena *arena, char *file, char *source);
+	Parser(Allocator allocator, char *file, char *source);
 
 	Array<Node*>* parse();
 };

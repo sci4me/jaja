@@ -69,7 +69,8 @@ struct Token {
 
 struct Lexer {
 private:
-	Arena *arena;
+	Allocator allocator;
+
 	char *file;
 	char *source;
 	u32 length;
@@ -104,7 +105,7 @@ private:
 	void scan_next();
 
 public:
-	Lexer(Arena *arena, char *file, char *source);
+	Lexer(Allocator allocator, char *file, char *source);
 
 	bool has_token();
 

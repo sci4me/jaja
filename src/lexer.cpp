@@ -5,7 +5,7 @@
 
 #include "lexer.h"
 
-Lexer::Lexer(Arena *_arena, char *_file, char *_source) : arena(_arena), file(_file), source(_source), start(0), curr(0) {
+Lexer::Lexer(Allocator _allocator, char *_file, char *_source) : allocator(_allocator), file(_file), source(_source), start(0), curr(0) {
 	length = strlen(_source);
 	scan_next();
 }
@@ -50,7 +50,7 @@ void Lexer::ignore() {
 
 char* Lexer::current() {
 	u32 len = curr - start + 1;
-	auto s = (char*) arena->alloc(len);
+	auto s = (char*) ALLOC(allocator, len);
 	memcpy(s, source + start, len - 1);
 	s[len - 1] = 0;
 	return s;
@@ -230,13 +230,13 @@ void Lexer::find_next_token() {
  			}
 
  			u32 len = end - start + 2;
- 			auto s = (char*) arena->alloc(len);
+ 			auto s = (char*) ALLOC(allocator, len);
  			memcpy(s, source + start, len);
  			s[len - 1] = 0;
 
  			emit(TokenType::STRING);
-			// TOOD remove this
- 			// free(token.raw); // TODO hack
+			// TOOD HACK remove this
+			FREE(allocator, token.raw);
  			token.raw = s;
  			break;
  		}
