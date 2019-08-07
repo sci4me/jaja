@@ -31,6 +31,7 @@ s32 main(s32 argc, char **argv) {
 	
 	auto main = compiler.compile(ast);
 
+	// TODO REMOVEME
 	Array<Node*> queue;
 	FOR(ast, i) {
 		queue.push(ast->data[i]);
@@ -50,6 +51,7 @@ s32 main(s32 argc, char **argv) {
 		}
 	}
 	free(ast->data);
+	//
 
 	heap.mark_root(main.a);
 

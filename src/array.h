@@ -10,18 +10,19 @@
 
 template<typename T>
 struct Array {
+	Allocator allocator;
 	u32 size;
 	u32 count;
 	T *data;
 
-	Array() {
+	Array(Allocator _allocator = cstdlib_allocator) : allocator(_allocator) {
 		size = 16;
 		count = 0;
 		data = NULL;
 	}
 
 	~Array() {
-		free(data);
+		allocator.free(data);
 	}
 
 	void clear() {
@@ -30,12 +31,13 @@ struct Array {
 
 	void push(T value) {
 		if(data == NULL) {
-			data = (T*) calloc(size, sizeof(T));
+			data = (T*) allocator.alloc(size * sizeof(T));
+			// data = (T*) calloc(size, sizeof(T));
 		}
 
 		if(count >= size - 1) {
 			size *= 2;
-			data = (T*) realloc(data, size * sizeof(T));
+			data = (T*) allocator.realloc(data, size * sizeof(T));
 		}
 
 		data[count++] = value;
