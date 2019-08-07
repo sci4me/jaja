@@ -476,7 +476,7 @@ void __rt_push_number(Stack *stack, s64 n) {
 }
 
 void __rt_push_string(Stack *stack, char *s) {
-	Value v; // TODO: allocate on Heap?
+	Value v;
 	v.a = 0;
 	v.type = VALUE_STRING;
 	v.string = s;
@@ -484,7 +484,7 @@ void __rt_push_string(Stack *stack, char *s) {
 }
 
 void __rt_push_reference(Stack *stack, char *r) {
-	Value v; // TODO: allocate on Heap?
+	Value v;
 	v.a = 0;
 	v.type = VALUE_REFERENCE;
 	v.string = r;

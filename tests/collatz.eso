@@ -18,7 +18,7 @@ and instead of compiling a lambda for the if body, just compile the code in dire
     1+
 ]#
 
-"test" println ; !
+"a" "a"
 
 {
 [
