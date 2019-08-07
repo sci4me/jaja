@@ -179,7 +179,9 @@ void __rt_cond_exec(Heap *heap, Scope *scope, Stack *stack) {
 	assert(body.type == VALUE_LAMBDA);
 
 	if(cond.is_truthy()) {
-		(*body.lambda.fn)(heap, scope->push(), stack);
+		auto s = scope->push();
+		(*body.lambda.fn)(heap, s, stack);
+		delete s;
 	}
 }
 

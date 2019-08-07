@@ -11,19 +11,15 @@
 #define NODE_CONSTANT 2
 
 struct Node {
-	u8 type;
+	u8 node_type;
 
-	Node(u8 _type) : type(_type) {}
-
-	virtual void print_as_bytecode(u32 level = 0) {}
+	Node(u8 _type) : node_type(_type) {}
 };
 
 struct LambdaNode : public Node {
 	Array<Node*> body;
 
 	LambdaNode() : Node(NODE_LAMBDA) {}
-
-	void print_as_bytecode(u32 level = 0);
 };
 
 #define AST_OP_EQ 				0x00
@@ -55,16 +51,14 @@ struct InstructionNode : public Node {
 	u8 op;
 
 	InstructionNode(u8 _op) : Node(NODE_INSTRUCTION), op(_op) {}
-
-	void print_as_bytecode(u32 level = 0);
 };
 
-#define AST_CONST_TRUE 			0
-#define AST_CONST_FALSE 		1
-#define AST_CONST_NIL 			2
-#define AST_CONST_NUMBER 		3
-#define AST_CONST_STRING		4
-#define AST_CONST_REFERENCE		5
+#define AST_CONST_TRUE 			((u8)0)
+#define AST_CONST_FALSE 		((u8)1)
+#define AST_CONST_NIL 			((u8)2)
+#define AST_CONST_NUMBER 		((u8)3)
+#define AST_CONST_STRING		((u8)4)
+#define AST_CONST_REFERENCE		((u8)5)
 
 struct ConstantNode : public Node {
 	u8 type;
@@ -75,8 +69,6 @@ struct ConstantNode : public Node {
 
 	ConstantNode(u8 _type, s64 _number) : Node(NODE_CONSTANT), type(_type), number(_number) {} 
 	ConstantNode(u8 _type, char *_string) : Node(NODE_CONSTANT), type(_type), string(_string) {}
-
-	void print_as_bytecode(u32 level = 0);
 };
 
 #endif

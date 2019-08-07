@@ -82,6 +82,8 @@ struct Heap {
 	Array<Allocation*> _allocations;
 	Array<Allocation*> roots;
 
+	~Heap();
+
 #ifdef HEAP_DEBUG
 	Value* alloc(u32 line, const char *func, const char *file);
 #else

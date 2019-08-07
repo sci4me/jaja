@@ -1,12 +1,34 @@
 #include "runtime.h"
 
+static void free_allocation(Allocation *a) {
+	switch(a->value.type) {
+		case VALUE_STRING:
+		case VALUE_REFERENCE:
+			break;
+		case VALUE_OBJECT:
+			// delete a->value.object;
+			break;
+		case VALUE_LAMBDA:
+			// jit_free(a->value.lambda.j);
+			break;
+	}
+
+	delete a;
+}
+
+Heap::~Heap() {
+	FOR((&allocations), i) {
+		free_allocation(allocations.data[i]);	
+	}
+}
+
 #ifdef HEAP_DEBUG
 Value* Heap::alloc(u32 line, const char *func, const char *file) {
 #else
 Value* Heap::alloc() {
 #endif
 	if(allocations.count > 1000) {
-		gc();
+		// gc();
 	}
 
 #ifdef HEAP_DEBUG
@@ -41,12 +63,16 @@ void Heap::unmark_root(Allocation *a) {
 }
 
 void Heap::gc() {
-	u32 total = allocations.count;
+	u32 total = allocations.count; 
 
 	u32 marked = 0;
 	FOR((&roots), i) {
 		auto root = roots.data[i];
-		assert(allocations.index_of(root) != -1);
+		if(allocations.index_of(root) == -1) {
+			printf("degenerate allocation: %p : %s@%s:%u\n", root, root->func, root->file, root->line);
+			assert(false);
+		}
+		// assert(allocations.index_of(root) != -1);
 		marked += mark(root);
 	}
 
@@ -99,15 +125,21 @@ u32 Heap::sweep() {
 			_allocations.push(x);
 		} else {
 			swept++;
-
-			delete x;
+			free_allocation(x);
 		}
 	}
 
-	auto tmp = allocations;
-	allocations = _allocations;
-	_allocations = tmp;
-	_allocations.clear();
+	{
+		u8 tmp[sizeof(Array<Allocation>)];
+		memcpy(&tmp, &allocations, sizeof(Array<Allocation>));
+		memcpy(&allocations, &_allocations, sizeof(Array<Allocation>));
+		memcpy(&_allocations, &tmp, sizeof(Array<Allocation>));		
+	}
+
+	FOR((&roots), i) {
+		auto x = roots.data[i];
+		assert(allocations.index_of(x) != -1);
+	}
 
 	return swept;
 

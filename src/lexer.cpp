@@ -5,7 +5,7 @@
 
 #include "lexer.h"
 
-Lexer::Lexer(char *_file, char *_source) : file(_file), source(_source), start(0), curr(0) {
+Lexer::Lexer(Arena *_arena, char *_file, char *_source) : arena(_arena), file(_file), source(_source), start(0), curr(0) {
 	length = strlen(_source);
 	scan_next();
 }
@@ -50,7 +50,7 @@ void Lexer::ignore() {
 
 char* Lexer::current() {
 	u32 len = curr - start + 1;
-	auto s = (char*) malloc(len);
+	auto s = (char*) arena->alloc(len);
 	memcpy(s, source + start, len - 1);
 	s[len - 1] = 0;
 	return s;
@@ -230,12 +230,13 @@ void Lexer::find_next_token() {
  			}
 
  			u32 len = end - start + 2;
- 			auto s = (char*) malloc(len);
+ 			auto s = (char*) arena->alloc(len);
  			memcpy(s, source + start, len);
  			s[len - 1] = 0;
 
  			emit(TokenType::STRING);
- 			free(token.raw); // TODO hack
+			// TOOD remove this
+ 			// free(token.raw); // TODO hack
  			token.raw = s;
  			break;
  		}
@@ -259,7 +260,8 @@ void Lexer::find_next_token() {
 					emit(TokenType::REFERENCE);
 				}
 
-				free(s);
+				// TOOD remove this
+				// free(s);
 			} else {
 				// TODO handle this
 				fprintf(stderr, "Unexpected character: %c\n", c);

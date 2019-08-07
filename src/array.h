@@ -14,12 +14,10 @@ struct Array {
 	u32 count;
 	T *data;
 
-	Array() : Array(16) {}
-
-	Array(u64 capacity) {
-		size = capacity;
+	Array() {
+		size = 16;
 		count = 0;
-		data = (T*) calloc(size, sizeof(T));
+		data = NULL;
 	}
 
 	~Array() {
@@ -31,6 +29,10 @@ struct Array {
 	}
 
 	void push(T value) {
+		if(data == NULL) {
+			data = (T*) calloc(size, sizeof(T));
+		}
+
 		if(count >= size - 1) {
 			size *= 2;
 			data = (T*) realloc(data, size * sizeof(T));

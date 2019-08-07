@@ -5,6 +5,7 @@
 #include "parser.h"
 #include "compiler.h"
 #include "gc.h"
+#include "arena.h"
 
 #define ADD_STD_FN(g, func, name) { Value v; v.a = 0; v.type = VALUE_LAMBDA; v.lambda.fn = func; g.set((char*)name, v); }
 
@@ -20,15 +21,18 @@ s32 main(s32 argc, char **argv) {
 		return 1;
 	}
 
-	auto p = Parser(argv[1], source);
+	auto parser_arena = Arena();
+	auto p = Parser(&parser_arena, argv[1], source);
 	auto ast = p.parse();
+	free(source);
 
 	auto heap = Heap();
 	auto compiler = Compiler(&heap);
 	
 	auto main = compiler.compile(ast);
+
 	heap.mark_root(main.a);
-	
+
 	auto G = Scope(NULL);
 
 	ADD_STD_FN(G, __std_print, "print");
@@ -38,7 +42,10 @@ s32 main(s32 argc, char **argv) {
 	
 	(*main.lambda.fn)(&heap, &G, &stack);
 
-	heap.gc();
+	// heap.gc();
+
+	printf("parser_arena.block_count: %llu\n", parser_arena.block_count);
+	printf("parser_arena.head->used: %llu\n", parser_arena.head->used);
 
 	return 0;
 }

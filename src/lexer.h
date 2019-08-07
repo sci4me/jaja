@@ -2,6 +2,7 @@
 #define LEXER_H
 
 #include "types.h"
+#include "arena.h"
 
 struct Span {
 	u32 start;
@@ -68,12 +69,13 @@ struct Token {
 
 struct Lexer {
 private:
+	Arena *arena;
 	char *file;
 	char *source;
 	u32 length;
 	u32 start;
 	u32 curr;
-	bool _has_token;
+	bool _has_token = false;
 	bool rescan;
 	u32 line;
 	u32 column;
@@ -102,7 +104,7 @@ private:
 	void scan_next();
 
 public:
-	Lexer(char *file, char *source);
+	Lexer(Arena *arena, char *file, char *source);
 
 	bool has_token();
 

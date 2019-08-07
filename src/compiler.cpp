@@ -29,7 +29,7 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 
 	FOR(ast, i) {
 		auto node = ast->data[i];
-		switch(node->type) {
+		switch(node->node_type) {
 			case NODE_LAMBDA:
 				compile_lambda(j, static_cast<LambdaNode*>(node));
 				break;
@@ -57,12 +57,12 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 
 #ifdef JIT_DEBUG
 	jit_comment(j, "<<<");
+	jit_check_code(j, JIT_WARN_ALL);
 #endif
 
-	jit_check_code(j, JIT_WARN_ALL); // TODO: move into JIT_DEBUG section
 	jit_generate_code(j);
 
-#ifdef JIT_DEBUG
+#ifdef JIT_DEBUG	
 	printf("ops {\n");
 	jit_dump_ops(j, JIT_DEBUG_OPS);
 	printf("}\n");
