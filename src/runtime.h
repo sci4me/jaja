@@ -56,7 +56,6 @@ struct Value {
 };
 
 struct Allocation {
-	// Allocation *next;
 	bool marked;
 	Value value;
 
@@ -68,7 +67,6 @@ struct Allocation {
 };
 
 struct Heap {
-	// Allocation *head = NULL;
 	Array<Allocation*> allocations;
 	Array<Allocation*> roots;
 

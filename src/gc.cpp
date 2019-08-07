@@ -2,6 +2,18 @@
 
 #include "runtime.h"
 
+// TODO make GC/Heap _MUCH_ better
+//  - objects want the ability to have multiple allocations that get marked when that object gets marked
+//    - things like hash tables and arrays that resize
+//    - ability to free for extra credit?
+//      - free list type of thing?
+//  - do we want plain-old mark/sweep? (not really)
+//    - generational
+//    - moving vs. non-moving
+//    - incremental? (HUGE bonus points)
+//  - proper tracking of memory usage and limits
+//  - resizing (i.e. get bigger when needed and smaller when it makes sense*)
+
 static void free_allocation(Allocation *a) {
 	switch(a->value.type) {
 		case VALUE_STRING:
@@ -11,6 +23,7 @@ static void free_allocation(Allocation *a) {
 			delete a->value.object;
 			break;
 		case VALUE_LAMBDA:
+			// TODO why is this no bueno?
 			// jit_free(a->value.lambda.j);
 			break;
 	}
@@ -40,10 +53,8 @@ Value* Heap::alloc() {
 	a->file = file;
 #endif
 	// printf("alloc a: %p : %s@%s:%d\n", a, func, file, line);
-	// a->next = head;
 	a->marked = false;
 	a->value.a = a;
-	// head = a;
 	allocations.push(a);
 	return &a->value;
 }
@@ -52,8 +63,6 @@ void Heap::mark_root(Allocation *a) {
 	assert(a);
 	assert(allocations.index_of(a) != -1);
 
-	// assert(v.a->next != v.a);
-
 	// TODO should we really allow this if statement?
 	if(roots.index_of(a) == -1) roots.push(a);
 }
@@ -61,7 +70,6 @@ void Heap::mark_root(Allocation *a) {
 void Heap::unmark_root(Allocation *a) {
 	assert(a);
 	assert(allocations.index_of(a) != -1);
-	// assert(v.a->next != v.a);
 
 	auto i = roots.index_of(a);
 	if(i != -1)	roots.unordered_remove(i);
@@ -73,11 +81,7 @@ void Heap::gc() {
 	u32 marked = 0;
 	FOR((&roots), i) {
 		auto root = roots.data[i];
-		if(allocations.index_of(root) == -1) {
-			printf("degenerate allocation: %p : %s@%s:%u\n", root, root->func, root->file, root->line);
-			assert(false);
-		}
-		// assert(allocations.index_of(root) != -1);
+		assert(allocations.index_of(root) != -1);
 		marked += mark(root);
 	}
 
@@ -88,20 +92,14 @@ void Heap::gc() {
 	assert(k == marked);
 
 	u32 swept = sweep();
-	// u32 swept = 0;
 
-	printf("\nGC Cycle:\n\tstart:  %u\n\tmarked: %u\n\tswept:  %u\n\tmissing: %u\n\tend: %u\n", total, marked, swept, total - (marked + swept), allocations.count);
+	// printf("\nGC Cycle:\n\tstart:  %u\n\tmarked: %u\n\tswept:  %u\n\tmissing: %u\n\tend: %u\n", total, marked, swept, total - (marked + swept), allocations.count);
 }
 
 u32 Heap::mark(Allocation *a) {
 	assert(a);
 	assert(allocations.index_of(a) != -1);
 
-	// if(allocations.index_of(a) == -1) {
-		// printf("skipped marking degenerate allocation: %p : %s@%s:%u\n", a, a->func, a->file, a->line);
-		// return 0;
-	// }
-	
 	// assert(v.a->next != v.a);
 
 	a->marked = true;
@@ -138,49 +136,4 @@ u32 Heap::sweep() {
 	}
 
 	return to_remove.count;
-
-	/*
-	Array<Allocation*> to_remove;
-	FOR((&allocations), i) {
-		auto x = allocations.data[i];
-		if(!x->marked) {
-			x->marked = false;
-		} else {
-			to_remove.push(x);
-		}
-	}
-	FOR((&to_remove), i) {
-		auto x = allocations.data[i];
-		allocations.unordered_remove(allocations.index_of(x));
-		delete x;
-	}
-	*/
-
-	// Array<Allocation*> to_delete; // TODO HACK REMOVEME
-	// Allocation *prev = NULL;
-	// for(Allocation *curr = head; curr; prev = curr, curr = curr->next) {
-	// 	assert(curr->next != curr);
-
-	// 	if(curr->marked) continue;
-
-	// 	auto next = curr->next;
-	// 	if(prev) {
-	// 		assert(prev != next);
-	// 		prev->next = next;
-	// 	} else {
-	// 		head = next;
-	// 	}
-
-	// 	// printf("sweeping %d (%d) : %s@%s:%d\n", curr->value.type, curr->marked, curr->func, curr->file, curr->line);
-
-	// 	to_delete.push(curr);
-	// }	
-	// FOR((&to_delete), i) {	
-	// 	// TODO: this is wrong
-	// 	delete to_delete.data[i];
-	// }
-
-	// return to_delete.count;
-
-	// return to_remove.count;
 }
