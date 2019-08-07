@@ -31,6 +31,26 @@ s32 main(s32 argc, char **argv) {
 	
 	auto main = compiler.compile(ast);
 
+	Array<Node*> queue;
+	FOR(ast, i) {
+		queue.push(ast->data[i]);
+	}
+	while(queue.count) {
+		auto node = queue.pop();
+		switch(node->node_type) {
+			case NODE_LAMBDA:
+				auto lambda = static_cast<LambdaNode*>(node);
+
+				FOR((&lambda->body), i) {
+					queue.push(lambda->body.data[i]);
+				}
+
+				free(lambda->body.data);
+				break;
+		}
+	}
+	free(ast->data);
+
 	heap.mark_root(main.a);
 
 	auto G = Scope(NULL);

@@ -17,7 +17,7 @@ struct Node {
 };
 
 struct LambdaNode : public Node {
-	Array<Node*> body;
+	Array<Node*> body; // TODO LEAK FIXME
 
 	LambdaNode() : Node(NODE_LAMBDA) {}
 };
