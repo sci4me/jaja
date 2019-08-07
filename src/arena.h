@@ -20,7 +20,6 @@ struct Arena {
 	~Arena();
 
 	u8* alloc(u64 size);
-	void reset();
 
 	Allocator as_allocator();
 };

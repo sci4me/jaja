@@ -9,7 +9,7 @@ and instead of compiling a lambda for the if body, just compile the code in dire
 [n:0s:[n;1=~][n;collatz;!n:s;1+s:]#s;]steps:
 
 1
-[$10<][
+[$10000<][
     $
     $print;!" = "print;!
     steps;!

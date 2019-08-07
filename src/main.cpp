@@ -44,8 +44,5 @@ s32 main(s32 argc, char **argv) {
 
 	// heap.gc();
 
-	printf("parser_arena.block_count: %llu\n", parser_arena.block_count);
-	printf("parser_arena.head->used: %llu\n", parser_arena.head->used);
-
 	return 0;
 }

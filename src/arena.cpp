@@ -40,20 +40,6 @@ u8* Arena::alloc(u64 n) {
 	return p;
 }
 
-void Arena::reset() {
-	Block *last;
-
-	for(auto curr = head; curr; curr = curr->next) {
-		last = curr;
-
-		curr->used = 0;
-	}
-
-	head = last;
-
-	// TODO: are we gonna leak memory here? (yes..)
-}
-
 static void* __alloc(void *data, unsigned long int n) {
 	return static_cast<Arena*>(data)->alloc(n);
 }

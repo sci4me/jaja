@@ -4,7 +4,7 @@
 #include "types.h"
 #include "array.h"
 
-// TODO: convert this to be a tagged union instead of inheritance
+// TODO: convert this to be a tagged union instead of inheritance?
 
 #define NODE_LAMBDA 0
 #define NODE_INSTRUCTION 1
@@ -17,7 +17,7 @@ struct Node {
 };
 
 struct LambdaNode : public Node {
-	Array<Node*> body; // TODO LEAK FIXME
+	Array<Node*> body;
 
 	LambdaNode() : Node(NODE_LAMBDA) {}
 };
