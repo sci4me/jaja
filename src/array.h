@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include "types.h"
+#include "allocator.h"
 
 #define FOR(a, i) for(u32 i = 0; i < a->count; i++)
 
@@ -22,7 +23,7 @@ struct Array {
 	}
 
 	~Array() {
-		allocator.free(data);
+		allocator.free(allocator.data, data);
 	}
 
 	void clear() {
@@ -31,13 +32,13 @@ struct Array {
 
 	void push(T value) {
 		if(data == NULL) {
-			data = (T*) allocator.alloc(size * sizeof(T));
+			data = (T*) allocator.alloc(allocator.data, size * sizeof(T));
 			// data = (T*) calloc(size, sizeof(T));
 		}
 
 		if(count >= size - 1) {
 			size *= 2;
-			data = (T*) allocator.realloc(data, size * sizeof(T));
+			data = (T*) allocator.realloc(allocator.data, data, size * sizeof(T));
 		}
 
 		data[count++] = value;

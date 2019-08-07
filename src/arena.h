@@ -2,6 +2,7 @@
 #define ARENA_H
 
 #include "types.h"
+#include "allocator.h"
 
 struct Block {
 	Block *next;
@@ -19,6 +20,8 @@ struct Arena {
 
 	u8* alloc(u64 size);
 	void reset();
+
+	Allocator as_allocator();
 };
 
 #endif
