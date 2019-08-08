@@ -61,6 +61,7 @@ Value* Heap::alloc() {
 
 void Heap::mark_root(Allocation *a) {
 	assert(a);
+	assert(a->value.a == a);
 	assert(allocations.index_of(a) != -1);
 
 	// TODO should we really allow this if statement?
@@ -69,6 +70,7 @@ void Heap::mark_root(Allocation *a) {
 
 void Heap::unmark_root(Allocation *a) {
 	assert(a);
+	assert(a->value.a == a);
 	assert(allocations.index_of(a) != -1);
 
 	auto i = roots.index_of(a);
@@ -98,6 +100,7 @@ void Heap::gc() {
 
 u32 Heap::mark(Allocation *a) {
 	assert(a);
+	assert(a->value.a == a);
 	assert(allocations.index_of(a) != -1);
 
 	// assert(v.a->next != v.a);
