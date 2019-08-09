@@ -6,3 +6,5 @@ tests/*.o
 
 se
 se-tests
+
+tests/test_setup.cpp
