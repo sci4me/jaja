@@ -43,6 +43,9 @@ $(EXECUTABLE): $(OBJECTS)
 $(TEST_EXECUTABLE): tests/test_setup.cpp $(OBJECTS) $(TEST_OBJECTS) tests/test_setup.o
 	$(CC) $(LDFLAGS) -o $@ $(EXTRA_OBJECTS) $(filter-out src/main.o,$(OBJECTS)) $(TEST_OBJECTS)
 
+$(TESTS_DIR)/%.o: $(TESTS_DIR)/%.cpp
+	$(CC) $(CXXFLAGS) -I $(TESTS_DIR) -I $(LIB_CODE_DIR) -c -o "$@" "$<"
+
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CC) $(CXXFLAGS) -I $(SRC_DIR) -I $(LIB_CODE_DIR) -c -o "$@" "$<"
 

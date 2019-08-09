@@ -20,7 +20,7 @@ static void free_allocation(Allocation *a) {
 		case VALUE_REFERENCE:
 			break;
 		case VALUE_OBJECT:
-			delete a->value.object;
+			free(a->value.object);
 			break;
 		case VALUE_LAMBDA:
 			// TODO why is this no bueno?

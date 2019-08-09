@@ -1,11 +1,11 @@
 #ifndef HASH_TABLE_H
 #define HASH_TABLE_H
 
-#include <stdlib.h>
 #include <assert.h>
 
 #include "types.h"
 #include "hash.h"
+#include "allocator.h"
 
 #include <stdio.h>
 
@@ -15,6 +15,8 @@
 
 template <typename K, typename V>
 struct Hash_Table {
+    Allocator allocator;
+
     u64 (*hash_fn)(K key);
     bool (*eq_fn)(K a, K b);
 
@@ -47,7 +49,7 @@ struct Hash_Table {
         }
     }
 
-    Hash_Table(u64 (*_hash_fn)(K data), bool (*_eq_fn)(K a, K b), u32 _size = 16) : hash_fn(_hash_fn), eq_fn(_eq_fn), size(_size) {
+    Hash_Table(u64 (*_hash_fn)(K data), bool (*_eq_fn)(K a, K b), u32 _size = 16, Allocator _allocator = cstdlib_allocator) : allocator(_allocator), hash_fn(_hash_fn), eq_fn(_eq_fn), size(_size) {
         assert(size > 0);
         count = 0;
         keys = (K*) calloc(size, sizeof(K));

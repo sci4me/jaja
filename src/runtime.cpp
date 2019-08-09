@@ -93,10 +93,6 @@ bool Scope::contains(char *key) {
 	return values.contains(key);
 }
 
-Scope* Scope::push() {
-	return new Scope(this);
-}
-
 void Scope::pop(Heap *heap) {
 	FOR((&values), i) {
 		auto v = values.values[i];
@@ -180,11 +176,10 @@ void __rt_cond_exec(Heap *heap, Scope *scope, Stack *stack) {
 	assert(body.type == VALUE_LAMBDA);
 
 	if(cond.is_truthy()) {
-		auto s = scope->push();
+		auto s = Scope(scope);
 		if(body.a) heap->mark_root(body.a);
-		(*body.lambda.fn)(heap, s, stack);
+		(*body.lambda.fn)(heap, &s, stack);
 		if(body.a) heap->unmark_root(body.a);
-		delete s; // TODO remove new/delete entirely
 	}
 }
 
@@ -349,7 +344,8 @@ void __rt_mod(Stack *stack) {
 void __rt_newobj(Stack *stack, Heap *heap) {
 	auto v = GC_ALLOC(heap);
 	v->type = VALUE_OBJECT;
-	v->object = new Hash_Table<Value, Value>(__value_hash, __value_eq);
+	v->object = (Hash_Table<Value, Value>*) malloc(sizeof(Hash_Table<Value, Value>));
+	*v->object = Hash_Table<Value, Value>(__value_hash, __value_eq);
 	stack->push(*v);
 }
 
