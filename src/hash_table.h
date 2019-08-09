@@ -13,6 +13,11 @@
 #define HT_STATE_OCCUPIED 1
 #define HT_STATE_REMOVED 2
 
+template <typename K>
+bool default_eq_fn(K a, K b) {
+    return a == b;
+}
+
 template <typename K, typename V>
 struct Hash_Table {
     Allocator allocator;
@@ -35,32 +40,32 @@ struct Hash_Table {
             auto old_values = values;
             auto old_state = state;
 
-            keys = (K*) calloc(size, sizeof(K));
-            values = (V*) calloc(size, sizeof(V));
-            state = (u8*) calloc(size, sizeof(u8));
+            keys = (K*) ALLOC(allocator, size * sizeof(K));
+            values = (V*) ALLOC(allocator, size * sizeof(V));
+            state = (u8*) ALLOC(allocator, size * sizeof(u8));
 
             for(u32 i = 0; i < old_size; i++) {
                 if(old_state[i]) put(old_keys[i], old_values[i]);
             }
 
-            free(old_keys);
-            free(old_values);
-            free(old_state);
+            FREE(allocator, old_keys);
+            FREE(allocator, old_values);
+            FREE(allocator, old_state);
         }
     }
 
-    Hash_Table(u64 (*_hash_fn)(K data), bool (*_eq_fn)(K a, K b), u32 _size = 16, Allocator _allocator = cstdlib_allocator) : allocator(_allocator), hash_fn(_hash_fn), eq_fn(_eq_fn), size(_size) {
+    Hash_Table(u64 (*_hash_fn)(K data), bool (*_eq_fn)(K a, K b) = default_eq_fn, u32 _size = 16, Allocator _allocator = cstdlib_allocator) : allocator(_allocator), hash_fn(_hash_fn), eq_fn(_eq_fn), size(_size) {
         assert(size > 0);
         count = 0;
-        keys = (K*) calloc(size, sizeof(K));
-        values = (V*) calloc(size, sizeof(V));
-        state = (u8*) calloc(size, sizeof(u8));
+        keys = (K*) ALLOC(allocator, size * sizeof(K));
+        values = (V*) ALLOC(allocator, size * sizeof(V));
+        state = (u8*) ALLOC(allocator, size * sizeof(u8));
     }
 
     ~Hash_Table() {
-        free(keys);
-        free(values);
-        free(state);
+        FREE(allocator, keys);
+        FREE(allocator, values);
+        FREE(allocator, state);
     }
 
     void put(K key, V value) {
@@ -103,7 +108,7 @@ _return_zero:
         return x;
     }
 
-    bool contains(K key) {
+    bool contains_key(K key) {
         u64 index = hash_fn(key) % size;
         for(;;) {
             index &= (size - 1);

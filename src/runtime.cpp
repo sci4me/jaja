@@ -90,7 +90,7 @@ Value Scope::get(char *key) {
 }
 
 bool Scope::contains(char *key) {
-	return values.contains(key);
+	return values.contains_key(key);
 }
 
 void Scope::pop(Heap *heap) {
@@ -355,7 +355,7 @@ void __rt_get_prop(Stack *stack) {
 
 	assert(object.type == VALUE_OBJECT);
 
-	if(object.object->contains(key)) {
+	if(object.object->contains_key(key)) {
 		stack->push(object.object->get(key));
 	} else {
 		Value v;

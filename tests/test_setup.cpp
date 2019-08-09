@@ -11,4 +11,8 @@ SETUP_TEST(array_tests, ordered_remove_works);
 SETUP_TEST(array_tests, index_of_works);
 SETUP_TEST(array_tests, expands_as_needed);
 SETUP_TEST(array_tests, for_macro_works);
+SETUP_TEST(hash_table_tests, put_works);
+SETUP_TEST(hash_table_tests, get_works);
+SETUP_TEST(hash_table_tests, contains_works);
+SETUP_TEST(hash_table_tests, remove_works);
 }
