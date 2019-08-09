@@ -1,4 +1,5 @@
 .idea
 src/*.o
+tests/*.o
 se
 se-tests
