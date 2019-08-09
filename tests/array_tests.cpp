@@ -1,7 +1,7 @@
 #include "tests.h"
 #include "../src/array.h"
 
-DEFINE_TEST(push_works) {
+DEFINE_TEST(array_push_works) {
 	auto a = Array<u32>();
 	
 	for(u32 i = 0; i < 10; i++) a.push(i);
@@ -10,7 +10,7 @@ DEFINE_TEST(push_works) {
 	for(u32 i = 0; i < 10; i++) assert(a.data[i] == i);
 }
 
-DEFINE_TEST(pop_works) {
+DEFINE_TEST(array_pop_works) {
 	auto a = Array<u32>();
 
 	for(u32 i = 0; i < 10; i++) a.push(i);
@@ -18,7 +18,7 @@ DEFINE_TEST(pop_works) {
 	for(u32 i = 0; i < 10; i++) assert(a.pop() == 9 - i);
 }
 
-DEFINE_TEST(clear_works) {
+DEFINE_TEST(array_clear_works) {
 	auto a = Array<u32>();
 
 	a.push(42);
@@ -31,7 +31,7 @@ DEFINE_TEST(clear_works) {
 	assert(a.count == 0);
 }
 
-DEFINE_TEST(unordered_remove_works) {
+DEFINE_TEST(array_unordered_remove_works) {
 	auto a = Array<u32>();
 
 	a.push(1);
@@ -52,7 +52,7 @@ DEFINE_TEST(unordered_remove_works) {
 	assert(a.data[2] == 3);
 }
 
-DEFINE_TEST(ordered_remove_works) {
+DEFINE_TEST(array_ordered_remove_works) {
 	auto a = Array<u32>();
 
 	a.push(1);
@@ -73,7 +73,7 @@ DEFINE_TEST(ordered_remove_works) {
 	assert(a.data[2] == 4);
 }
 
-DEFINE_TEST(index_of_works) {
+DEFINE_TEST(array_index_of_works) {
 	auto a = Array<u32>();
 
 	for(u32 i = 0; i < 5; i++) a.push(4 - i);
@@ -83,7 +83,7 @@ DEFINE_TEST(index_of_works) {
 	assert(a.index_of(42) == -1);
 }
 
-DEFINE_TEST(expands_as_needed) {
+DEFINE_TEST(array_expands_as_needed) {
 	auto a = Array<u32>();
 
 	auto n = a.size;
@@ -93,7 +93,7 @@ DEFINE_TEST(expands_as_needed) {
 	assert(a.size == n * 2);
 }
 
-DEFINE_TEST(for_macro_works) {
+DEFINE_TEST(array_for_macro_works) {
 	auto a = Array<u32>();
 
 	for(u32 i = 0; i < 5; i++) a.push(i);

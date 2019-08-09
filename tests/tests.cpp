@@ -19,6 +19,7 @@ static u32 __test_file_index(const char *file) {
 		if(strcmp(file, files[i]) == 0) return i;
 	}
 
+	assert(file_count < MAX_FILES);
 	files[file_count] = file;
 	return file_count++;
 }
@@ -26,6 +27,7 @@ static u32 __test_file_index(const char *file) {
 void __setup_test(const char *file, const char *name, test_fn fn) {
 	auto file_index = __test_file_index(file);
 	files[file_index] = file;
+	assert(test_count < MAX_TESTS);
 	tests[test_count++] = { .file_index = file_index, .name = name, .fn = fn };
 }
 

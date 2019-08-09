@@ -2,7 +2,7 @@
 #include "../src/hash.h"
 #include "../src/hash_table.h"
 
-DEFINE_TEST(put_works) {
+DEFINE_TEST(hash_table_put_works) {
     auto x = Hash_Table<u64, u64>(hash_u64);
 
     x.put(1, 42);
@@ -16,7 +16,7 @@ DEFINE_TEST(put_works) {
     assert(x.values[i] == 42);
 }
 
-DEFINE_TEST(get_works) {
+DEFINE_TEST(hash_table_get_works) {
     auto x = Hash_Table<u64, u64>(hash_u64);
 
     x.put(1, 42);
@@ -26,9 +26,11 @@ DEFINE_TEST(get_works) {
     assert(x.get(1) == 42);
     assert(x.get(2) == 69);
     assert(x.get(1337) == 999);
+
+    assert(x.get(11) == 0);
 }
 
-DEFINE_TEST(contains_works) {
+DEFINE_TEST(hash_table_contains_works) {
     auto x = Hash_Table<u64, u64>(hash_u64);
 
     x.put(3, 42);
@@ -44,7 +46,7 @@ DEFINE_TEST(contains_works) {
     assert(!x.contains_key(22));
 }
 
-DEFINE_TEST(remove_works) {
+DEFINE_TEST(hash_table_remove_works) {
     auto x = Hash_Table<u64, u64>(hash_u64);
 
     x.put(3, 42);

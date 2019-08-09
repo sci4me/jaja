@@ -128,8 +128,6 @@ _return_zero:
         for(;;) {
             index &= (size - 1);
             if(state[index] == HT_STATE_OCCUPIED && eq_fn(keys[index], key)) {
-                // memset(&keys[index], 0, sizeof(K));
-                // memset(&values[index], 0, sizeof(V));
                 state[index] = HT_STATE_REMOVED;
                 count--;
                 return true;
