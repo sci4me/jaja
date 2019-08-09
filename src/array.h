@@ -2,6 +2,7 @@
 #define ARRAY_H
 
 #include <assert.h>
+#include <string.h>
 
 #include "types.h"
 #include "allocator.h"
