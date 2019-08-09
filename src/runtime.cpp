@@ -14,9 +14,10 @@ bool Value::is_truthy() {
 		case VALUE_OBJECT:	
 		case VALUE_LAMBDA:
 			return true;
-		default:
-			assert(false);	
 	}
+
+	assert(false);
+	return false;
 }
 
 bool Value::operator==(const Value &other) {
@@ -122,10 +123,10 @@ static u64 __value_hash(Value v) {
 			break;
 		case VALUE_LAMBDA:
 			return hash_ptr(v.a);
-		default:
-			assert(false);
-			return 0;
 	}
+
+	assert(false);
+	return 0;
 }
 
 static bool __value_eq(Value a, Value b) {

@@ -21,7 +21,7 @@ CXXFLAGS=
 all: release
 
 release: clean
-release: CXXFLAGS+=-O2
+release: CXXFLAGS+=-O2 -DNDEBUG
 release: $(EXECUTABLE)
 
 debug: clean
