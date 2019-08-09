@@ -1,20 +1,34 @@
 #ifdef TESTING
 
-#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <assert.h>
 
 #include "tests.h"
 
+static const char *files[MAX_FILES];
+static u32 file_count;
 static TestCase tests[MAX_TESTS];
 static u32 test_count;
 
 extern void test_setup();
 
-void __setup_test(const char *name, test_fn fn) {
-	tests[test_count++] = { .name = name, .fn = fn };
+static u32 __test_file_index(const char *file) {
+	for(u32 i = 0; i < file_count; i++) {
+		if(strcmp(file, files[i]) == 0) return i;
+	}
+
+	files[file_count] = file;
+	return file_count++;
+}
+
+void __setup_test(const char *file, const char *name, test_fn fn) {
+	auto file_index = __test_file_index(file);
+	files[file_index] = file;
+	tests[test_count++] = { .file_index = file_index, .name = name, .fn = fn };
 }
 
 s32 main(s32 argc, char **argv) {
@@ -23,23 +37,31 @@ s32 main(s32 argc, char **argv) {
 	u32 failed = 0;
 	u32 succeeded = 0;
 
-	for(u32 i = 0; i < test_count; i++) {
-		auto test = tests[i];
+	for(u32 i = 0; i < file_count; i++) {
+		auto file = files[i];
 
-		pid_t pid = fork();
-		if(pid == 0) {
-			test.fn();
-			exit(0);
-		} else {
-			int status;
-			pid_t cpid;
-			assert((cpid = wait(&status)) == pid);
-			if(status) {
-				printf("\u001b[31;1m*\u001b[0m %s\n", test.name);
-				failed++;
+		printf("%s:\n", file);
+
+		for(u32 j = 0; j < test_count; j++) {
+			auto test = tests[j];
+
+			if(test.file_index != i) continue;
+
+			pid_t pid = fork();
+			if(pid == 0) {
+				test.fn();
+				exit(0);
 			} else {
-				printf("\u001b[32;1m\u2713\u001b[0m %s\n", test.name);
-				succeeded++;
+				int status;
+				pid_t cpid;
+				assert((cpid = wait(&status)) == pid);
+				if(status) {
+					printf("  \u001b[31;1m*\u001b[0m %s\n", test.name);
+					failed++;
+				} else {
+					printf("  \u001b[32;1m\u2713\u001b[0m %s\n", test.name);
+					succeeded++;
+				}
 			}
 		}
 	}
