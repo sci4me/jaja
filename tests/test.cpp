@@ -5,7 +5,7 @@
 #include <sys/wait.h>
 #include <assert.h>
 
-#include "tests.h"
+#include "test.h"
 
 static const char *files[MAX_FILES];
 static u32 file_count;

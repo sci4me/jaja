@@ -1,4 +1,4 @@
-#include "tests.h"
+#include "test.h"
 #include "../src/array.h"
 
 DEFINE_TEST(array_push_works) {

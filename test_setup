@@ -6,5 +6,5 @@ echo "#define STR(x) XSTR(x)" >> $FILE
 echo "#define SETUP_TEST(file, name) extern void _##name(); __setup_test(STR(file), STR(name), _##name)" >> $FILE 
 echo "extern void __setup_test(const char *file, const char *name, void (*fn)());" >> $FILE
 echo "void test_setup() {" >> $FILE
-grep -oE 'DEFINE_TEST\(([^\)]*)\)' tests/* | cut -b 7- | sed 's/\([^.]*\).\(h\|cpp\):DEFINE_TEST(\([^\)]*\))/SETUP_TEST(\1, \3);/' | grep -v 'SETUP_TEST(tests, name)' >> $FILE
+grep -oE 'DEFINE_TEST\(([^\)]*)\)' tests/* | cut -b 7- | sed 's/\([^.]*\).\(h\|cpp\):DEFINE_TEST(\([^\)]*\))/SETUP_TEST(\1, \3);/' | grep -v 'SETUP_TEST(test, name)' >> $FILE
 echo "}" >> $FILE
