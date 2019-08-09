@@ -1,7 +1,5 @@
-#ifdef TESTING
-
 #include "tests.h"
-#include "array.h"
+#include "../src/array.h"
 
 DEFINE_TEST(push_works) {
 	auto a = Array<u32>();
@@ -104,5 +102,3 @@ DEFINE_TEST(for_macro_works) {
 		assert(a.data[i] == i);
 	}
 }
-
-#endif

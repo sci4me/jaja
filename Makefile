@@ -1,10 +1,13 @@
 SRC_DIR=src
+TESTS_DIR=tests
 LIB_CODE_DIR=lib_code
 LIB_OBJS_DIR=lib_objs
 CC=g++
 
 SOURCES=$(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(SRC_DIR)/*/*.cpp) $(wildcard $(SRC_DIR)/*/*/*.cpp) $(wildcard $(SRC_DIR)/*/*/*/*.cpp) $(wildcard $(SRC_DIR)/*/*/*/*/*.cpp)
 OBJECTS=$(patsubst %.cpp,%.o,$(filter %.cpp,$(SOURCES)))
+TEST_SOURCES=$(wildcard $(TESTS_DIR)/*.cpp)
+TEST_OBJECTS=$(patsubst %.cpp,%.o,$(filter %.cpp,$(TEST_SOURCES)))
 EXTRA_OBJECTS=$(wildcard $(LIB_OBJS_DIR)/*.o)
 
 TEST_EXECUTABLE=se-tests
@@ -26,32 +29,26 @@ debug: LDFLAGS+=-g
 debug: CXXFLAGS+=-g -O0
 debug: $(EXECUTABLE)
 
-src/test_setup.cpp:
+tests/test_setup.cpp:
 	sh test_setup
 
 test: LDFLAGS+=-g
 test: CXXFLAGS+=-g -O0 -DTESTING
-test: OBJECTS+=src/test_setup.o
 test: clean $(TEST_EXECUTABLE)
 	./$(TEST_EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(EXTRA_OBJECTS)
 
-define uniq =
-  $(eval seen :=)
-  $(foreach _,$1,$(if $(filter $_,${seen}),,$(eval seen += $_)))
-  ${seen}
-endef
-
-$(TEST_EXECUTABLE): src/test_setup.cpp $(OBJECTS) src/test_setup.o
-	$(CC) $(LDFLAGS) -o $@ $(filter-out src/main.o,$(call uniq,$(OBJECTS))) $(EXTRA_OBJECTS)
+$(TEST_EXECUTABLE): tests/test_setup.cpp $(OBJECTS) $(TEST_OBJECTS) tests/test_setup.o
+	$(CC) $(LDFLAGS) -o $@ $(EXTRA_OBJECTS) $(filter-out src/main.o,$(OBJECTS)) $(TEST_OBJECTS)
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CC) $(CXXFLAGS) -I $(SRC_DIR) -I $(LIB_CODE_DIR) -c -o "$@" "$<"
 
 clean:
 	rm -f $(OBJECTS)
+	rm -f $(TEST_OBJECTS)
 	rm -f $(EXECUTABLE)
 	rm -f $(TEST_EXECUTABLE)
 	rm -f src/test_setup.cpp

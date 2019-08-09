@@ -1,9 +1,9 @@
-#ifdef TESTING
-
 #ifndef TESTS_H
 #define TESTS_H
 
-#include "types.h"
+#include "../src/types.h"
+
+#define MAX_TESTS 1024
 
 typedef void (*test_fn)();
 
@@ -15,7 +15,5 @@ struct TestCase {
 void __setup_test(TestCase tc);
 
 #define DEFINE_TEST(name) void _##name()
-
-#endif
 
 #endif

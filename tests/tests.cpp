@@ -4,16 +4,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <assert.h>
 
 #include "tests.h"
-#include "array.h"
 
-static Array<TestCase> tests;
+static TestCase tests[MAX_TESTS];
+static u32 test_count;
 
 extern void test_setup();
 
 void __setup_test(const char *name, test_fn fn) {
-	tests.push({ .name = name, .fn = fn });
+	tests[test_count++] = { .name = name, .fn = fn };
 }
 
 s32 main(s32 argc, char **argv) {
@@ -22,8 +23,8 @@ s32 main(s32 argc, char **argv) {
 	u32 failed = 0;
 	u32 succeeded = 0;
 
-	FOR((&tests), i) {
-		auto test = tests.data[i];
+	for(u32 i = 0; i < test_count; i++) {
+		auto test = tests[i];
 
 		pid_t pid = fork();
 		if(pid == 0) {
@@ -43,14 +44,13 @@ s32 main(s32 argc, char **argv) {
 		}
 	}
 
-	auto total = tests.count;
 	printf(
 		"\nFailed: %u (%.2f%)\nPassed: %u (%.2f%)\nTotal:  %u\n", 
 		failed, 
-		((f64)failed / (f64)total) * 100.0f, 
+		((f64)failed / (f64)test_count) * 100.0f, 
 		succeeded, 
-		((f64)succeeded / (f64)total) * 100.0f, 
-		total);
+		((f64)succeeded / (f64)test_count) * 100.0f, 
+		test_count);
 
 	return 0;
 }
