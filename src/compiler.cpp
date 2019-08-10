@@ -299,31 +299,31 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			break;
 		}
 		case AST_OP_STORE: {
-			JIT_RT_CALL_012(__rt_store);
-			/*
+			// JIT_RT_CALL_012(__rt_store);
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_store");
 #endif
 
-			auto const R_KEY = R(3);
-			auto const R_VALUE = R(4);
-			jit_addi(j, R_KEY, R_FP, jit_allocai(j, sizeof(Value)));
-			jit_addi(j, R_VALUE, R_FP, jit_allocai(j, sizeof(Value)));
+			auto key = ralloc();
+			auto value = ralloc();
+			jit_addi(j, key, R_FP, jit_allocai(j, sizeof(Value)));
+			jit_addi(j, value, R_FP, jit_allocai(j, sizeof(Value)));
 
 			jit_prepare(j);
 			jit_putargr(j, R_STACK);
-			jit_putargr(j, R_KEY);
+			jit_putargr(j, key);
 			jit_call_method(j, &Stack::pop_into);
 
 			jit_prepare(j);
 			jit_putargr(j, R_STACK);
-			jit_putargr(j, R_VALUE);
+			jit_putargr(j, value);
 			jit_call_method(j, &Stack::pop_into);			
 
 #ifndef NDEBUG
-			jit_ldxi(j, R(5), R_KEY, offsetof(Value, type), sizeof(Value::type));
+			auto type = ralloc();
+			jit_ldxi(j, type, key, offsetof(Value, type), sizeof(Value::type));
 
-			auto l = jit_beqi(j, 0, R(5), VALUE_REFERENCE);
+			auto l = jit_beqi(j, 0, type, VALUE_REFERENCE);
 			jit_prepare(j);
 			jit_putargi(j, 0);
 			jit_putargi(j, 0);
@@ -331,16 +331,22 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_putargi(j, 0);
 			jit_call(j, __assert_fail);
 			jit_patch(j, l);
+			
+			rfree(type);
 #endif	
 
-			jit_ldxi(j, R(5), R_KEY, offsetof(Value, string), sizeof(Value::string));
+			auto string = ralloc();
+			jit_ldxi(j, string, key, offsetof(Value, string), sizeof(Value::string));
 
 			jit_prepare(j);
 			jit_putargr(j, R_SCOPE);
-			jit_putargr(j, R(5));
-			jit_putargr(j, R_VALUE);
+			jit_putargr(j, string);
+			jit_putargr(j, value);
 			jit_call_method(j, &Scope::set);
-			*/
+
+			rfree(key);
+			rfree(value);
+			rfree(string);
 			break;
 		}
 		case AST_OP_WHILE:
