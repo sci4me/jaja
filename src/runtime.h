@@ -105,15 +105,17 @@ struct Stack {
 };
 
 struct Scope {
+	Heap *heap;
 	Scope *parent;
 	Hash_Table<char*, Value> values;
 
-	Scope(Scope *_parent) : parent(_parent), values(Hash_Table<char*, Value>(hash_string, eq_string)) {}
+	Scope(Heap *_heap) : parent(NULL), heap(_heap), values(Hash_Table<char*, Value>(hash_string, eq_string)) {}
+	Scope(Scope *_parent) : parent(_parent), heap(_parent->heap), values(Hash_Table<char*, Value>(hash_string, eq_string)) {}
 
 	Scope *push();
 	void pop(Heap *heap);
 
-	void set(char *key, Value value);
+	void set(char *key, Value *value);
 	Value* get(char *key);
 	bool contains(char *key);
 };

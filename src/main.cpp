@@ -7,7 +7,7 @@
 #include "gc.h"
 #include "arena.h"
 
-#define ADD_STD_FN(g, func, name) { Value v; v.a = 0; v.type = VALUE_NATIVE; v.lambda.fn = func; g.set((char*)name, v); }
+#define ADD_STD_FN(g, func, name) { Value v; v.a = 0; v.type = VALUE_NATIVE; v.lambda.fn = func; g.set((char*)name, &v); }
 
 s32 main(s32 argc, char **argv) {
 	if(argc != 2) {
@@ -39,7 +39,7 @@ s32 main(s32 argc, char **argv) {
 
 	heap.mark_root(main.a);
 
-	auto G = Scope(NULL);
+	auto G = Scope(&heap);
 
 	ADD_STD_FN(G, __std_print, "print");
 	ADD_STD_FN(G, __std_println, "println");
@@ -49,10 +49,12 @@ s32 main(s32 argc, char **argv) {
 	(*main.lambda.fn)(&heap, &G, &stack);
 
 	// just for fun
+	/*
 	while(stack.data.count) stack.pop();
 	G.pop(&heap);
 	heap.unmark_root(main.a);
 	heap.gc();
+	*/
 
 	/*
 	FOR((&heap.allocations), i) {

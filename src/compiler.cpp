@@ -72,14 +72,21 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 	jit_comment(j, "__rt_push_lambda");
 #endif
 
+#ifdef HEAP_DEBUG
 	jit_movi(j, R(3), 0);
 	jit_prepare(j);
 	jit_putargr(j, R(0));
-	jit_putargr(j, R(3));
+	jit_putargr(j, R(3)); // TODO put real shit here?
 	jit_putargr(j, R(3));
 	jit_putargr(j, R(3));
 	jit_call_method(j, &Heap::alloc);
 	jit_retval(j, R(3));
+#else
+	jit_prepare(j);
+	jit_putargr(j, R(0));
+	jit_call_method(j, &Heap::alloc);
+	jit_retval(j, R(3));
+#endif
 
 	jit_movi(j, R(4), VALUE_LAMBDA);
 	jit_stxi(j, offsetof(Value, type), R(3), R(4), sizeof(Value::type));
@@ -231,7 +238,7 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_prepare(j);
 			jit_putargr(j, R(1));
 			jit_putargr(j, R(4));
-			jit_call_method(j, &Scope::get);
+			jit_call_method(j, &Scope::get); // @Volatile
 			jit_retval(j, R(4));
 
 			auto l2 = jit_bnei(j, 0, R(4), 0);
@@ -248,9 +255,51 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_call_method(j, &Stack::push);
 			break;
 		}
-		case AST_OP_STORE:
+		case AST_OP_STORE: {
 			JIT_RT_CALL_012(__rt_store);
+			/*
+#ifdef JIT_DEBUG
+			jit_comment(j, "__rt_store");
+#endif
+
+			auto const R_KEY = R(3);
+			auto const R_VALUE = R(4);
+			jit_addi(j, R_KEY, R_FP, jit_allocai(j, sizeof(Value)));
+			jit_addi(j, R_VALUE, R_FP, jit_allocai(j, sizeof(Value)));
+
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_putargr(j, R_KEY);
+			jit_call_method(j, &Stack::pop_into);
+
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_putargr(j, R_VALUE);
+			jit_call_method(j, &Stack::pop_into);			
+
+#ifndef NDEBUG
+			jit_ldxi(j, R(5), R_KEY, offsetof(Value, type), sizeof(Value::type));
+
+			auto l = jit_beqi(j, 0, R(5), VALUE_REFERENCE);
+			jit_prepare(j);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_call(j, __assert_fail);
+			jit_patch(j, l);
+#endif	
+
+			jit_ldxi(j, R(5), R_KEY, offsetof(Value, string), sizeof(Value::string));
+
+			jit_prepare(j);
+			jit_putargr(j, R(1));
+			jit_putargr(j, R(5));
+			jit_putargr(j, R_VALUE);
+			jit_call_method(j, &Scope::set);
+			*/
 			break;
+		}
 		case AST_OP_WHILE:
 			JIT_RT_CALL_012(__rt_while);
 			break;

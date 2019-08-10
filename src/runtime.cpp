@@ -91,14 +91,18 @@ void Stack::rot() {
 	data.data[data.count - 3] = y;
 }
 
-void Scope::set(char *key, Value value) {
+void Scope::set(char *key, Value *value) {
+	auto old = get(key);
+	if(old && old->a) heap->unmark_root(old->a);
+	if(value->a) heap->mark_root(value->a);
+
 	for(Scope *curr = this; curr; curr = curr->parent) {
 		if(curr->contains(key)) {
-			curr->values.put(key, value);
+			curr->values.put(key, *value);
 			return;
 		}
 	}
-	values.put(key, value);
+	values.put(key, *value);
 }
 
 Value* Scope::get(char *key) {
@@ -404,7 +408,7 @@ void __rt_store(Heap *heap, Scope *scope, Stack *stack) {
 	if(old && old->a) heap->unmark_root(old->a);
 	if(value.a)	heap->mark_root(value.a);
 
-	scope->set(key.string, value);
+	scope->set(key.string, &value);
 }
 
 void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
