@@ -176,43 +176,138 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 
 void Compiler::compile_constant(jit *j, Node *n) {
 	switch(n->type) {
-		case NODE_TRUE:
-			JIT_RT_CALL_2(__rt_push_true);
+		case NODE_TRUE: {
+#ifdef JIT_DEBUG
+			jit_comment(j, "__rt_push_true");
+#endif
+			auto i = jit_allocai(j, sizeof(Value));
+
+			jit_addi(j, R(3), R_FP, i);
+			jit_movi(j, R(4), 0);
+			jit_stxi(j, offsetof(Value, a), R(3), R(4), sizeof(Value::a));
+			jit_movi(j, R(4), VALUE_TRUE);
+			jit_stxi(j, offsetof(Value, type), R(3), R(4), sizeof(Value::type));
+
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_putargr(j, R(3));
+			jit_call(j, __rt_push_value);
 			break;
-		case NODE_FALSE:
-			JIT_RT_CALL_2(__rt_push_false);
+		}
+		case NODE_FALSE: {
+#ifdef JIT_DEBUG
+			jit_comment(j, "__rt_push_false");
+#endif
+			auto i = jit_allocai(j, sizeof(Value));
+
+			jit_addi(j, R(3), R_FP, i);
+			jit_movi(j, R(4), 0);
+			jit_stxi(j, offsetof(Value, a), R(3), R(4), sizeof(Value::a));
+			jit_movi(j, R(4), VALUE_FALSE);
+			jit_stxi(j, offsetof(Value, type), R(3), R(4), sizeof(Value::type));
+
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_putargr(j, R(3));
+			jit_call(j, __rt_push_value);
 			break;
-		case NODE_NIL:
-			JIT_RT_CALL_2(__rt_push_nil);
+		}
+		case NODE_NIL: {
+			#ifdef JIT_DEBUG
+			jit_comment(j, "__rt_push_nil");
+#endif
+			auto i = jit_allocai(j, sizeof(Value));
+
+			jit_addi(j, R(3), R_FP, i);
+			jit_movi(j, R(4), 0);
+			jit_stxi(j, offsetof(Value, a), R(3), R(4), sizeof(Value::a));
+			jit_movi(j, R(4), VALUE_NIL);
+			jit_stxi(j, offsetof(Value, type), R(3), R(4), sizeof(Value::type));
+
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_putargr(j, R(3));
+			jit_call(j, __rt_push_value);
 			break;
-		case NODE_NUMBER:
+		}
+		case NODE_NUMBER: {
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_push_number");
 #endif
+			auto i = jit_allocai(j, sizeof(Value));
+
+			jit_addi(j, R(3), R_FP, i);
+			jit_movi(j, R(4), 0);
+			jit_stxi(j, offsetof(Value, a), R(3), R(4), sizeof(Value::a));
+			jit_movi(j, R(4), VALUE_NUMBER);
+			jit_stxi(j, offsetof(Value, type), R(3), R(4), sizeof(Value::type));
+			jit_movi(j, R(4), n->number);
+			jit_stxi(j, offsetof(Value, number), R(3), R(4), sizeof(Value::number));
+
 			jit_prepare(j);
 			jit_putargr(j, R(2));
-			jit_putargi(j, n->number);
-			jit_call(j, __rt_push_number);
+			jit_putargr(j, R(3));
+			jit_call(j, __rt_push_value);
 			break;
+		}
 		case NODE_STRING: {
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_push_string");
 #endif
+			jit_op *skip = jit_jmpi(j, JIT_FORWARD);
+
+			jit_label *l = jit_get_label(j);
+			jit_data_str(j, n->string);
+
+			jit_code_align(j, 32);
+			jit_patch(j, skip);
+
+			jit_ref_data(j, R(3), l);
+
+			auto i = jit_allocai(j, sizeof(Value));
+
+			jit_addi(j, R(4), R_FP, i);
+			jit_movi(j, R(5), 0);
+			jit_stxi(j, offsetof(Value, a), R(4), R(5), sizeof(Value::a));
+			jit_movi(j, R(5), VALUE_STRING);
+			jit_stxi(j, offsetof(Value, type), R(4), R(5), sizeof(Value::type));
+			jit_stxi(j, offsetof(Value, string), R(4), R(3), sizeof(Value::string));
+
 			jit_prepare(j);
 			jit_putargr(j, R(2));
-			jit_putargi(j, n->string);
-			jit_call(j, __rt_push_string);
+			jit_putargr(j, R(4));
+			jit_call(j, __rt_push_value);
 			break;
 		}
-		case NODE_REFERENCE:
+		case NODE_REFERENCE: {
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_push_reference");
 #endif
+			jit_op *skip = jit_jmpi(j, JIT_FORWARD);
+
+			jit_label *l = jit_get_label(j);
+			jit_data_str(j, n->string);
+
+			jit_code_align(j, 32);
+			jit_patch(j, skip);
+
+			jit_ref_data(j, R(3), l);
+
+			auto i = jit_allocai(j, sizeof(Value));
+
+			jit_addi(j, R(4), R_FP, i);
+			jit_movi(j, R(5), 0);
+			jit_stxi(j, offsetof(Value, a), R(4), R(5), sizeof(Value::a));
+			jit_movi(j, R(5), VALUE_REFERENCE);
+			jit_stxi(j, offsetof(Value, type), R(4), R(5), sizeof(Value::type));
+			jit_stxi(j, offsetof(Value, string), R(4), R(3), sizeof(Value::string));
+
 			jit_prepare(j);
 			jit_putargr(j, R(2));
-			jit_putargi(j, n->string);
-			jit_call(j, __rt_push_reference);
+			jit_putargr(j, R(4));
+			jit_call(j, __rt_push_value);
 			break;
+		}
 		default:
 			assert(false);
 			break;

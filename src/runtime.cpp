@@ -47,6 +47,11 @@ void Stack::push(Value v) {
 	data.push(v);
 }
 
+void Stack::push(Value *v) {
+	if(v->a) heap->mark_root(v->a);
+	data.push(*v);
+}
+
 Value Stack::pop() {
 	auto x = data.pop();
 	if(x.a) heap->unmark_root(x.a);
@@ -448,49 +453,8 @@ void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
 	if(cond.a) heap->unmark_root(cond.a);
 }
 
-void __rt_push_true(Stack *stack) {
-	Value v;
-	v.a = 0;
-	v.type = VALUE_TRUE;
-	stack->push(v);
-}
-
-void __rt_push_false(Stack *stack) {
-	Value v;
-	v.a = 0;
-	v.type = VALUE_FALSE;
-	stack->push(v);
-}
-
-void __rt_push_nil(Stack *stack) {
-	Value v;
-	v.a = 0;
-	v.type = VALUE_NIL;
-	stack->push(v);
-}
-
-void __rt_push_number(Stack *stack, s64 n) {
-	Value v;
-	v.a = 0;
-	v.type = VALUE_NUMBER;
-	v.number = n;
-	stack->push(v);
-}
-
-void __rt_push_string(Stack *stack, char *s) {
-	Value v;
-	v.a = 0;
-	v.type = VALUE_STRING;
-	v.string = s;
-	stack->push(v);
-}
-
-void __rt_push_reference(Stack *stack, char *r) {
-	Value v;
-	v.a = 0;
-	v.type = VALUE_REFERENCE;
-	v.string = r;
-	stack->push(v);
+void __rt_push_value(Stack *stack, Value *v) {
+	stack->push(*v);
 }
 
 void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn) {

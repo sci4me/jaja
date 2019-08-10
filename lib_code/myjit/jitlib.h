@@ -23,8 +23,7 @@
 // #define _XOPEN_SOURCE 600
 
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <string.h> // FIXME: get rid of memcpy 
 #include "cpu-detect.h"
 
 /*
@@ -77,7 +76,6 @@ typedef struct jit_op {
 	struct jit_debug_info *debug_info;
 	unsigned long code_offset;			// offset in the output buffer
 	unsigned long code_length;			// offset in the output buffer
-	void *addendum;			// additional information
 } jit_op;
 
 typedef struct jit_label {
@@ -86,32 +84,62 @@ typedef struct jit_label {
         struct jit_label * next;
 } jit_label;
 
-typedef jit_value jit_reg;
+typedef struct {
+        unsigned type: 1; // INT / FP
+        unsigned spec: 2; // register, alias, immediate, argument's shadow space
+        unsigned part: 1; // allows to split one virtual register into two hw. registers (implicitly 0)
+        unsigned id: 28;
+#ifndef JIT_ARCH_AMD64
+#else
+        unsigned reserved: 32; 
+#endif
+} jit_reg;
 
-union jit_proc_value_alias {       
-        void (*ptr)();
-        jit_value num;
-}; 
 
-#define JIT_PROC_VALUE(_f) jit_proc_value((void (*)(void)) (_f))
-static inline jit_value jit_proc_value(void (*f)(void))
+/*
+ * internal auxiliary functions 
+ */
+
+// FIXME: replace memcpy with union 
+static inline jit_value JIT_REG_TO_JIT_VALUE(jit_reg r)
 {
-	union jit_proc_value_alias alias;
-	alias.ptr = f;
-	return alias.num;
+        jit_value v;
+        memcpy(&v, &r, sizeof(jit_reg));
+        return v;
 }
 
-// _type: INT/FP (1 bit)
-// _spec: register, alias, immediate, argument's shadow space (2 bits)
-// _part: allows to split one virtual register into two hw. registers (implicitly 0) (1 bit)
-// _id: (28 bits)
-#define jit_mkreg(_type, _spec, _id) (((_type) & 0x01) | (((_spec) & 0x03) << 1) | ((_id) & 0xfffffff) << 4)
-#define jit_mkreg_ex(_type, _spec, _id) (((_type) & 0x01) | (((_spec) & 0x03) << 1) | (1 << 3) | ((_id) & 0xfffffff) << 4)
+static inline jit_reg JIT_REG(jit_value v)
+{
+        jit_reg r;
+        memcpy(&r, &v, sizeof(jit_value));
+        return r;
+}
 
-#define JIT_REG_TYPE(_r) ((_r) & 0x01)
-#define JIT_REG_SPEC(_r) (((_r) >> 1) & 0x03)
-#define JIT_REG_ID(_r) (((_r) >> 4) & 0xfffffff)
-#define JIT_REG_PART(_r) (((_r) >> 3) & 0x01)
+static inline jit_value jit_mkreg(int type, int spec, int id)
+{
+	jit_reg r;
+	r.type = type;
+	r.spec = spec;
+	r.id = id;
+	r.part = 0;
+#ifdef JIT_ARCH_AMD64
+	r.reserved = 0;
+#endif
+	return JIT_REG_TO_JIT_VALUE(r);
+}
+
+static inline jit_value jit_mkreg_ex(int type, int spec, int id)
+{
+	jit_reg r;
+	r.type = type;
+	r.spec = spec;
+	r.id = id;
+	r.part = 1;
+#ifdef JIT_ARCH_AMD64
+	r.reserved = 0;
+#endif
+	return JIT_REG_TO_JIT_VALUE(r);
+}
 
 
 /*
@@ -157,8 +185,6 @@ typedef enum {
 	JIT_LDX		= (0x22 << 3),
 	JIT_ST		= (0x23 << 3),
 	JIT_STX		= (0x24 << 3),
-	JIT_MEMCPY	= (0x25 << 3),
-	JIT_MEMSET	= (0x26 << 3),
 
 	JIT_JMP 	= (0x30 << 3),
 	JIT_PREPARE 	= (0x31 << 3),
@@ -239,23 +265,11 @@ typedef enum {
 	JIT_FRET	= (0xa5 << 3),
 
 	JIT_DATA_BYTE	= (0xb0 << 3),
-	JIT_DATA_BYTES	= (0xb1 << 3),
-	JIT_DATA_REF_CODE  = (0xb2 << 3),
-	JIT_DATA_REF_DATA  = (0xb3 << 3),
-	JIT_CODE_ALIGN	= (0xb4 << 3),
-	JIT_REF_CODE	= (0xb5 << 3),
-	JIT_REF_DATA	= (0xb6 << 3),
-
-	// block transfers
-	JIT_TRANSFER	  = (0xc0 << 3),
-	JIT_TRANSFER_CPY  = (0xc1 << 3),
-	JIT_TRANSFER_XOR  = (0xc2 << 3),
-	JIT_TRANSFER_AND  = (0xc3 << 3),
-	JIT_TRANSFER_OR   = (0xc4 << 3),
-	JIT_TRANSFER_ADD  = (0xc5 << 3),
-	JIT_TRANSFER_ADDS = (0xc6 << 3),
-	JIT_TRANSFER_SUB  = (0xc7 << 3),
-	JIT_TRANSFER_SUBS = (0xc8 << 3),
+	JIT_DATA_REF_CODE  = (0xb1 << 3),
+	JIT_DATA_REF_DATA  = (0xb2 << 3),
+	JIT_CODE_ALIGN	= (0xb3 << 3),
+	JIT_REF_CODE	= (0xb4 << 3),
+	JIT_REF_DATA	= (0xb5 << 3),
 
 	JIT_MSG		= (0xf0 << 3),
 	JIT_COMMENT	= (0xf1 << 3),
@@ -268,10 +282,7 @@ typedef enum {
 
 	// opcodes for testing and debugging purposes only
 	JIT_FORCE_SPILL	= (0x0200 << 3),
-	JIT_FORCE_ASSOC = (0x0201 << 3),
-	JIT_TRACE	= (0x0202 << 3),
-	JIT_MARK	= (0x0203 << 3),
-	JIT_TOUCH	= (0x0204 << 3)
+	JIT_FORCE_ASSOC = (0x0201 << 3)
 } jit_opcode;
 
 enum jit_inp_type {
@@ -312,7 +323,6 @@ enum jit_warning {
 #define JIT_OPT_OMIT_FRAME_PTR                  (0x01)
 #define JIT_OPT_OMIT_UNUSED_ASSIGNEMENTS        (0x02)
 #define JIT_OPT_JOIN_ADDMUL                     (0x04)
-#define JIT_OPT_DEAD_CODE			(0x08)
 #define JIT_OPT_ALL                             (0xff)
 
 struct jit * jit_init();
@@ -324,7 +334,6 @@ void jit_free(struct jit * jit);
 
 void jit_dump_ops(struct jit * jit, int verbosity);
 void jit_check_code(struct jit *jit, int warnings);
-void jit_trace(struct jit *jit, int verbosity);
 
 void jit_enable_optimization(struct jit * jit, int opt);
 void jit_disable_optimization(struct jit * jit, int opt);
@@ -454,26 +463,26 @@ int jit_allocai(struct jit * jit, int size);
 #define jit_beqr(jit, a, b, c) jit_add_op(jit, JIT_BEQ | REG, SPEC(IMM, REG, REG), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 #define jit_beqi(jit, a, b, c) jit_add_op(jit, JIT_BEQ | IMM, SPEC(IMM, REG, IMM), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 
-#define jit_bner(jit, a, b, c) jit_add_op(jit, JIT_BNE | REG, SPEC(IMM, REG, REG), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_bnei(jit, a, b, c) jit_add_op(jit, JIT_BNE | IMM, SPEC(IMM, REG, IMM), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bner(jit, a, b, c) jit_add_op(jit, JIT_BNE | REG, SPEC(IMM, REG, REG), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bnei(jit, a, b, c) jit_add_op(jit, JIT_BNE | IMM, SPEC(IMM, REG, IMM), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 
-#define jit_bmsr(jit, a, b, c) jit_add_op(jit, JIT_BMS | REG, SPEC(IMM, REG, REG), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_bmsi(jit, a, b, c) jit_add_op(jit, JIT_BMS | IMM, SPEC(IMM, REG, IMM), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bmsr(jit, a, b, c) jit_add_op(jit, JIT_BMS | REG, SPEC(IMM, REG, REG), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bmsi(jit, a, b, c) jit_add_op(jit, JIT_BMS | IMM, SPEC(IMM, REG, IMM), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 
-#define jit_bmcr(jit, a, b, c) jit_add_op(jit, JIT_BMC | REG, SPEC(IMM, REG, REG), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_bmci(jit, a, b, c) jit_add_op(jit, JIT_BMC | IMM, SPEC(IMM, REG, IMM), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bmcr(jit, a, b, c) jit_add_op(jit, JIT_BMC | REG, SPEC(IMM, REG, REG), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bmci(jit, a, b, c) jit_add_op(jit, JIT_BMC | IMM, SPEC(IMM, REG, IMM), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 
-#define jit_boaddr(jit, a, b, c) jit_add_op(jit, JIT_BOADD | REG | SIGNED, SPEC(IMM, REG, REG), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_boaddi(jit, a, b, c) jit_add_op(jit, JIT_BOADD | IMM | SIGNED, SPEC(IMM, REG, IMM), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_boaddr(jit, a, b, c) jit_add_op(jit, JIT_BOADD | REG | SIGNED, SPEC(IMM, REG, REG), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_boaddi(jit, a, b, c) jit_add_op(jit, JIT_BOADD | IMM | SIGNED, SPEC(IMM, REG, IMM), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 
-#define jit_bosubr(jit, a, b, c) jit_add_op(jit, JIT_BOSUB | REG | SIGNED, SPEC(IMM, REG, REG), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_bosubi(jit, a, b, c) jit_add_op(jit, JIT_BOSUB | IMM | SIGNED, SPEC(IMM, REG, IMM), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bosubr(jit, a, b, c) jit_add_op(jit, JIT_BOSUB | REG | SIGNED, SPEC(IMM, REG, REG), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bosubi(jit, a, b, c) jit_add_op(jit, JIT_BOSUB | IMM | SIGNED, SPEC(IMM, REG, IMM), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 
-#define jit_bnoaddr(jit, a, b, c) jit_add_op(jit, JIT_BNOADD | REG | SIGNED, SPEC(IMM, REG, REG), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_bnoaddi(jit, a, b, c) jit_add_op(jit, JIT_BNOADD | IMM | SIGNED, SPEC(IMM, REG, IMM), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bnoaddr(jit, a, b, c) jit_add_op(jit, JIT_BNOADD | REG | SIGNED, SPEC(IMM, REG, REG), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bnoaddi(jit, a, b, c) jit_add_op(jit, JIT_BNOADD | IMM | SIGNED, SPEC(IMM, REG, IMM), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 
-#define jit_bnosubr(jit, a, b, c) jit_add_op(jit, JIT_BNOSUB | REG | SIGNED, SPEC(IMM, REG, REG), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_bnosubi(jit, a, b, c) jit_add_op(jit, JIT_BNOSUB | IMM | SIGNED, SPEC(IMM, REG, IMM), (jit_value)(a), b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bnosubr(jit, a, b, c) jit_add_op(jit, JIT_BNOSUB | REG | SIGNED, SPEC(IMM, REG, REG), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_bnosubi(jit, a, b, c) jit_add_op(jit, JIT_BNOSUB | IMM | SIGNED, SPEC(IMM, REG, IMM), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 
 /* conditions */
 
@@ -520,27 +529,6 @@ int jit_allocai(struct jit * jit, int size);
 #define jit_stxr(jit, a, b, c, d) jit_add_op(jit, JIT_STX | REG, SPEC(REG, REG, REG), a, b, c, d, jit_debug_info_new(__FILE__, __func__, __LINE__))
 #define jit_stxi(jit, a, b, c, d) jit_add_op(jit, JIT_STX | IMM, SPEC(IMM, REG, REG), (jit_value)(a), b, c, d, jit_debug_info_new(__FILE__, __func__, __LINE__))
 
-/* transfer operations */
-
-#define jit_memcpyr(jit, a, b, c) jit_add_op(jit, JIT_MEMCPY | REG, SPEC(REG, REG, REG), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_memcpyi(jit, a, b, c) jit_add_op(jit, JIT_MEMCPY | IMM, SPEC(REG, REG, IMM), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-
-#define jit_memsetr(jit, a, b, c, d) jit_add_op(jit, JIT_MEMSET | REG, SPEC(REG, REG, REG), a, b, c, d, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_memseti(jit, a, b, c, d) jit_add_op(jit, JIT_MEMSET | IMM, SPEC(REG, REG, IMM), a, b, c, d, jit_debug_info_new(__FILE__, __func__, __LINE__))
-
-#define jit_transferr(jit, a, b, c, d) jit_add_op(jit, JIT_TRANSFER | REG, SPEC(REG, REG, REG), a, b, c, d, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_transferi(jit, a, b, c, d) jit_add_op(jit, JIT_TRANSFER | IMM, SPEC(REG, REG, IMM), a, b, c, d, jit_debug_info_new(__FILE__, __func__, __LINE__))
-
-#define jit_transfer_cpy(jit, a)  jit_add_op(jit, JIT_TRANSFER_CPY, SPEC(IMM, NO, NO), (jit_value)(a), 0, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_transfer_xorr(jit, a, b) jit_add_op(jit, JIT_TRANSFER_XOR | REG, SPEC(IMM, REG, NO), (jit_value)(a), b, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_transfer_andr(jit, a, b) jit_add_op(jit, JIT_TRANSFER_AND | REG, SPEC(IMM, REG, NO), (jit_value)(a), b, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_transfer_orr(jit, a, b) jit_add_op(jit, JIT_TRANSFER_OR | REG, SPEC(IMM, REG, NO), (jit_value)(a), b, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-
-#define jit_transfer_addr(jit, a, b) jit_add_op(jit, JIT_TRANSFER_ADD | REG, SPEC(IMM, REG, NO), (jit_value)(a), b, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_transfer_subr(jit, a, b) jit_add_op(jit, JIT_TRANSFER_SUB | REG, SPEC(IMM, REG, NO), (jit_value)(a), b, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-
-
-
 /* debugging */
 
 #define jit_msg(jit, a) jit_add_op(jit, JIT_MSG | IMM, SPEC(IMM, NO, NO), (jit_value)(a), 0, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
@@ -584,8 +572,8 @@ int jit_allocai(struct jit * jit, int size);
 #define jit_fbeqr(jit, a, b, c) jit_add_fop(jit, JIT_FBEQ | REG, SPEC(IMM, REG, REG), (jit_value)(a), b, c, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 #define jit_fbeqi(jit, a, b, c) jit_add_fop(jit, JIT_FBEQ | IMM, SPEC(IMM, REG, IMM), (jit_value)(a), b, 0, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 
-#define jit_fbner(jit, a, b, c) jit_add_fop(jit, JIT_FBNE | REG, SPEC(IMM, REG, REG), (jit_value)(a), b, c, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_fbnei(jit, a, b, c) jit_add_fop(jit, JIT_FBNE | IMM, SPEC(IMM, REG, IMM), (jit_value)(a), b, 0, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_fbner(jit, a, b, c) jit_add_fop(jit, JIT_FBNE | REG, SPEC(IMM, REG, REG), a, b, c, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_fbnei(jit, a, b, c) jit_add_fop(jit, JIT_FBNE | IMM, SPEC(IMM, REG, IMM), a, b, 0, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 
 #define jit_fstr(jit, a, b, c) jit_add_op(jit, JIT_FST | REG, SPEC(REG, REG, NO), a, b, 0, c, jit_debug_info_new(__FILE__, __func__, __LINE__))
 #define jit_fsti(jit, a, b, c) jit_add_op(jit, JIT_FST | IMM, SPEC(IMM, REG, NO), (jit_value)(a), b, 0, c, jit_debug_info_new(__FILE__, __func__, __LINE__))
@@ -629,23 +617,16 @@ int jit_allocai(struct jit * jit, int size);
 		for (int i = 0; i < count; i++) jit_data_byte(jit, 0x00);\
 	} while(0) 
 
-static inline jit_op *jit_data_bytes(struct jit *jit, jit_value count, unsigned char *data)
-{
-	jit_op *op = jit_add_op(jit, JIT_DATA_BYTES | IMM, SPEC(IMM, NO, NO), count, 0, 0, 0, NULL);
-	op->addendum = JIT_MALLOC(count);
-	memcpy(op->addendum, data, count);
-	return op;
-}
+#define jit_data_bytes(jit, count, data) \
+do {\
+	unsigned char *_data = (unsigned char *) (data);\
+	for (int i = 0; i < count; i++, _data++)\
+		jit_data_byte(jit, *(_data));\
+} while (0)
 
 /*
  * testing and debugging
  */
-#define jit_force_spill(jit, a) jit_add_op(jit, JIT_FORCE_SPILL, SPEC(REG, NO, NO), a, 0, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_force_assoc(jit, a, b, c) jit_add_op(jit, JIT_FORCE_ASSOC, SPEC(REG, IMM, NO), a, b, c, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_mark(jit, a) jit_add_op(jit, JIT_MARK, SPEC(IMM, NO, NO), (jit_value)(a), 0, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_full_spill(jit) jit_add_op(jit, JIT_FULL_SPILL, SPEC(NO, NO, NO), 0, 0, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-#define jit_touch(jit, a) jit_add_op(jit, JIT_TOUCH, SPEC(TREG, NO, NO), (jit_value)(a), 0, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
-
-int jit_regs_active_count(jit_op *op);
-void jit_regs_active(jit_op *op, jit_value *dest);
+#define jit_force_spill(jit, a) jit_add_fop(jit, JIT_FORCE_SPILL, SPEC(REG, NO, NO), a, 0, 0, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
+#define jit_force_assoc(jit, a, b, c) jit_add_fop(jit, JIT_FORCE_ASSOC, SPEC(REG, IMM, NO), a, b, c, 0, 0, jit_debug_info_new(__FILE__, __func__, __LINE__))
 #endif

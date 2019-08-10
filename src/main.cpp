@@ -21,8 +21,8 @@ s32 main(s32 argc, char **argv) {
 		return 1;
 	}
 
-	auto parser_arena = Arena();
-	auto p = Parser(parser_arena.as_allocator(), argv[1], source);
+	auto parser_arena = new Arena();
+	auto p = Parser(parser_arena->as_allocator(), argv[1], source);
 	auto ast = p.parse();
 	free(source);
 
@@ -35,6 +35,7 @@ s32 main(s32 argc, char **argv) {
 	auto compiler = Compiler(&heap);
 	
 	auto main = compiler.compile(ast);
+	delete parser_arena;
 
 	heap.mark_root(main.a);
 

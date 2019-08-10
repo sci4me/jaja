@@ -25,21 +25,21 @@
 #define CPU_DETECT_H
 
 // pretty lousy processor detection
-#if defined(__i386__)
+#ifdef __i386__
 	#define JIT_ARCH_I386
 	#define JIT_ARCH_COMMON86
-#elif defined(__amd64__)
-	#define JIT_ARCH_AMD64
-	#define JIT_ARCH_COMMON86
-#elif defined(__sparc__)
-	#define JIT_ARCH_SPARC
-#elif defined(__arm__)
-	#define JIT_ARCH_ARM32
+#else
+	#ifdef __sparc__
+		#define JIT_ARCH_SPARC
+	#else
+		#define JIT_ARCH_AMD64
+		#define JIT_ARCH_COMMON86
+	#endif
 #endif
 
 // enable this to test register allocation
 #define JIT_REGISTER_TEST
-//#undef JIT_REGISTER_TEST
+#undef JIT_REGISTER_TEST
 
 /*
  * i386 related macros
@@ -74,17 +74,9 @@
  */
 #ifdef JIT_ARCH_SPARC
 // maximum size of value (in bits) that can be used as an immediate value without the ``sign bit''
+// (i386 does not need to transform large immediates values)
 #define JIT_IMM_BITS	(12)
 #endif
-
-/*
- * ARM32 related macros
- */
-#ifdef JIT_ARCH_ARM32
-// maximum size of value (in bits) that can be used as an immediate value without the ``sign bit''
-#define JIT_IMM_BITS	(8)
-#endif
-
 
 
 
