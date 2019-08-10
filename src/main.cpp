@@ -49,12 +49,10 @@ s32 main(s32 argc, char **argv) {
 	(*main.lambda.fn)(&heap, &G, &stack);
 
 	// just for fun
-	/*
 	while(stack.data.count) stack.pop();
 	G.pop(&heap);
 	heap.unmark_root(main.a);
 	heap.gc();
-	*/
 
 	/*
 	FOR((&heap.allocations), i) {

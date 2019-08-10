@@ -403,11 +403,6 @@ void __rt_store(Heap *heap, Scope *scope, Stack *stack) {
 
 	assert(key.type == VALUE_REFERENCE);
 
-	auto old = scope->get(key.string);
-
-	if(old && old->a) heap->unmark_root(old->a);
-	if(value.a)	heap->mark_root(value.a);
-
 	scope->set(key.string, &value);
 }
 
