@@ -47,15 +47,6 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 		}
 	}
 
-#ifdef JIT_DEBUG
-	jit_comment(j, "__rt_epilogue");
-#endif
-
-	jit_prepare(j);
-	jit_putargr(j, R(1));
-	jit_putargr(j, R(0));
-	jit_call(j, __rt_epilogue);
-
 	jit_reti(j, 0);
 
 #ifdef JIT_DEBUG

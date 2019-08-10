@@ -74,7 +74,6 @@ struct Heap {
 	Array<Allocation*> roots;
 
 	Heap(Allocator _allocator = cstdlib_allocator) : allocator(_allocator) {}
-	~Heap();
 
 #ifdef HEAP_DEBUG
 	Value* alloc(u32 line, const char *func, const char *file);
@@ -104,9 +103,8 @@ struct Stack {
 struct Scope {
 	Scope *parent;
 	Hash_Table<char*, Value> values;
-	bool popped;
 
-	Scope(Scope *_parent) : parent(_parent), values(Hash_Table<char*, Value>(hash_string, eq_string)), popped(false) {}
+	Scope(Scope *_parent) : parent(_parent), values(Hash_Table<char*, Value>(hash_string, eq_string)) {}
 
 	Scope *push();
 	void pop(Heap *heap);

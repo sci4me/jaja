@@ -30,12 +30,6 @@ static void free_allocation(Allocator allocator, Allocation *a) {
 	FREE(allocator, a);
 }
 
-Heap::~Heap() {
-	FOR((&allocations), i) {
-		free_allocation(allocator, allocations.pop());	
-	}
-}
-
 #ifdef HEAP_DEBUG
 Value* Heap::alloc(u32 line, const char *func, const char *file) {
 #else
@@ -60,8 +54,6 @@ Value* Heap::alloc() {
 
 void Heap::mark_root(Allocation *a) {
 	assert(a);
-	// if(allocations.index_of(a) == -1) return;
-	// assert(a->value.a == a);
 	assert(allocations.index_of(a) != -1);
 
 	roots.push(a);
@@ -69,8 +61,6 @@ void Heap::mark_root(Allocation *a) {
 
 void Heap::unmark_root(Allocation *a) {
 	assert(a);
-	// if(allocations.index_of(a) == -1) return;
-	// assert(a->value.a == a);
 	assert(allocations.index_of(a) != -1);
 
 	auto i = roots.index_of(a);
@@ -87,23 +77,22 @@ void Heap::gc() {
 		marked += mark(root);
 	}
 
+	/*
 	u32 k = 0;
 	FOR((&allocations), i) {
 		if(allocations.data[i]->marked) k++;
 	}
 	assert(k == marked);
+	*/
 
 	u32 swept = sweep();
 
-	printf("\nGC Cycle:\n\tstart:  %u\n\tmarked: %u\n\tswept:  %u\n\tmissing: %u\n\tend: %u\n", total, marked, swept, total - (marked + swept), allocations.count);
+	// printf("\nGC Cycle:\n\tstart:  %u\n\tmarked: %u\n\tswept:  %u\n\tmissing: %u\n\tend: %u\n", total, marked, swept, total - (marked + swept), allocations.count);
 }
 
 u32 Heap::mark(Allocation *a) {
 	assert(a);
-	// assert(a->value.a == a);
 	assert(allocations.index_of(a) != -1);
-
-	// assert(v.a->next != v.a);
 
 	if(a->marked) return 0;
 

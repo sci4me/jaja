@@ -53,10 +53,12 @@ s32 main(s32 argc, char **argv) {
 	heap.unmark_root(main.a);
 	heap.gc();
 
+	/*
 	FOR((&heap.allocations), i) {
 		auto a = heap.allocations.data[i];
 		printf("root (%p) : %s@%s:%u\n", a, a->func, a->file, a->line);
 	}
+	*/
 
 	return 0;
 }

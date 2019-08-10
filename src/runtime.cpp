@@ -130,7 +130,7 @@ static u64 __value_hash(Value v) {
 	return 0;
 }
 
-static void call(Value v, Heap *heap, Scope *scope, Stack *stack) {
+static inline void call(Value v, Heap *heap, Scope *scope, Stack *stack) {
 	assert(v.type == VALUE_LAMBDA || v.type == VALUE_NATIVE);
 
 	auto s = Scope(scope);
@@ -142,6 +142,8 @@ static void call(Value v, Heap *heap, Scope *scope, Stack *stack) {
 	if(v.type == VALUE_LAMBDA && v.a) heap->mark_root(v.a);
 	(*v.lambda.fn)(heap, &s, stack);
 	if(v.type == VALUE_LAMBDA && v.a) heap->unmark_root(v.a);
+
+	s.pop(heap);
 }
 
 void __rt_eq(Stack *stack) {
@@ -186,9 +188,6 @@ void __rt_gt(Stack *stack) {
 void __rt_cond_exec(Heap *heap, Scope *scope, Stack *stack) {
 	auto body = stack->pop();
 	auto cond = stack->pop();
-
-	assert(body.type == VALUE_LAMBDA);
-
 	if(cond.is_truthy()) {
 		call(body, heap, scope, stack);
 	}
@@ -501,10 +500,6 @@ void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn) {
 	v->lambda.j = j;
 	v->lambda.fn = fn;
 	stack->push(*v);
-}
-
-void __rt_epilogue(Scope *scope, Heap *heap) {
-	// scope->pop(heap);
 }
 
 void __std_print(Heap *heap, Scope *scope, Stack *stack) {
