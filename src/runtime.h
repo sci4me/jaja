@@ -96,7 +96,7 @@ struct Stack {
 
 	void push(Value *v);
 	Value pop();
-	Value peek();
+	Value* peek();
 	void set_top(Value v);
 };
 
@@ -136,8 +136,6 @@ void __rt_newobj(Stack *stack, Heap *heap);
 void __rt_get_prop(Stack *stack);
 void __rt_set_prop(Stack *stack);
 
-void __rt_dup(Stack *stack);
-void __rt_drop(Stack *stack);
 void __rt_swap(Stack *stack);
 void __rt_rot(Stack *stack);
 

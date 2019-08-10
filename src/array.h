@@ -54,6 +54,11 @@ struct Array {
 		return v;
 	}
 
+	void drop() {
+		assert(count > 0);
+		count--;
+	}
+
 	bool unordered_remove(u32 index) {
 		if(index >= count) return false;
 

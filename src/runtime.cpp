@@ -53,9 +53,9 @@ Value Stack::pop() {
 	return x;
 }
 
-Value Stack::peek() {
+Value* Stack::peek() {
 	assert(data.count > 0);
-	return data.data[data.count - 1];
+	return &data.data[data.count - 1];
 }
 
 void Stack::set_top(Value v) {
@@ -148,7 +148,7 @@ static inline void call(Value v, Heap *heap, Scope *scope, Stack *stack) {
 
 void __rt_eq(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->peek();
+	auto a = *stack->peek();
 
 	Value c;
 	c.type = a == b ? VALUE_TRUE : VALUE_FALSE;
@@ -157,7 +157,7 @@ void __rt_eq(Stack *stack) {
 
 void __rt_lt(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->peek();
+	auto a = *stack->peek();
 
 	Value c;
 
@@ -172,7 +172,7 @@ void __rt_lt(Stack *stack) {
 
 void __rt_gt(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->peek();
+	auto a = *stack->peek();
 
 	Value c;
 
@@ -200,7 +200,7 @@ void __rt_exec(Heap *heap, Scope *scope, Stack *stack) {
 
 void __rt_and(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->peek();
+	auto a = *stack->peek();
 
 	Value c;
 
@@ -218,7 +218,7 @@ void __rt_and(Stack *stack) {
 
 void __rt_or(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->peek();
+	auto a = *stack->peek();
 
 	Value c;
 
@@ -237,22 +237,18 @@ void __rt_or(Stack *stack) {
 void __rt_not(Stack *stack) {
 	auto a = stack->peek();
 
-	Value c;
-
-	if(a.type == VALUE_TRUE) {
-		c.type = VALUE_FALSE;
-	} else if(a.type == VALUE_FALSE) {
-		c.type = VALUE_TRUE;
+	if(a->type == VALUE_TRUE) {
+		a->type = VALUE_FALSE;
+	} else if(a->type == VALUE_FALSE) {
+		a->type = VALUE_TRUE;
 	} else {
 		assert(false);
 	}
-
-	stack->set_top(c);
 }
 
 void __rt_add(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->peek();
+	auto a = *stack->peek();
 
 	Value c;
 
@@ -269,7 +265,7 @@ void __rt_add(Stack *stack) {
 
 void __rt_sub(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->peek();
+	auto a = *stack->peek();
 
 	Value c;
 
@@ -285,7 +281,7 @@ void __rt_sub(Stack *stack) {
 
 void __rt_mul(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->peek();
+	auto a = *stack->peek();
 
 	Value c;
 
@@ -301,7 +297,7 @@ void __rt_mul(Stack *stack) {
 
 void __rt_div(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->peek();
+	auto a = *stack->peek();
 
 	Value c;
 
@@ -318,21 +314,16 @@ void __rt_div(Stack *stack) {
 void __rt_neg(Stack *stack) {
 	auto a = stack->peek();
 
-	Value c;
-
-	if(a.type == VALUE_NUMBER) {
-		c.type = VALUE_NUMBER;
-		c.number = -a.number;
+	if(a->type == VALUE_NUMBER) {
+		a->number = -a->number;
 	} else {
 		assert(false);
 	}
-
-	stack->set_top(c);
 }
 
 void __rt_mod(Stack *stack) {
 	auto b = stack->pop();
-	auto a = stack->peek();
+	auto a = *stack->peek();
 
 	Value c;
 
@@ -378,14 +369,6 @@ void __rt_set_prop(Stack *stack) {
 	assert(object.type == VALUE_OBJECT);
 
 	object.object->put(key, value);
-}
-
-void __rt_dup(Stack *stack) {
-	stack->push(&stack->data.data[stack->data.count - 1]);	
-}
-
-void __rt_drop(Stack *stack) {
-	stack->pop();
 }
 
 void __rt_swap(Stack *stack) {

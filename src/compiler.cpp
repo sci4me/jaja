@@ -163,10 +163,27 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			JIT_RT_CALL_2(__rt_set_prop);
 			break;
 		case AST_OP_DUP:
-			JIT_RT_CALL_2(__rt_dup);
+#ifdef JIT_DEBUG
+			jit_comment(j, "__rt_dup");
+#endif
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_call_method(j, &Stack::peek);
+			jit_retval(j, R(3));
+
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_putargr(j, R(3));
+			jit_call_method(j, &Stack::push);
 			break;
 		case AST_OP_DROP:
-			JIT_RT_CALL_2(__rt_drop);
+#ifdef JIT_DEBUG
+			jit_comment(j, "__rt_drop");
+#endif
+			jit_addi(j, R(3), R(2), offsetof(Stack, data));
+			jit_prepare(j);
+			jit_putargr(j, R(3));
+			jit_call_method(j, &Array<Value>::drop);
 			break;
 		case AST_OP_SWAP:
 			JIT_RT_CALL_2(__rt_swap);
