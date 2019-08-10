@@ -62,3 +62,18 @@ DEFINE_TEST(hash_table_remove_works) {
     assert(x.contains_key(11));
     assert(!x.contains_key(6789998212));
 }
+
+DEFINE_TEST(hash_table_stress_test) {
+    auto x = Hash_Table<u64, u64>(hash_u64);
+
+    const u32 n = 1000;
+
+    for(u32 i = 0; i < n; i++) x.put(i * 2, i * 3);
+
+    assert(x.count == n);
+
+    for(u32 i = 0; i < n; i++) {
+        assert(x.contains_key(i * 2));
+        assert(x.get(i * 2) == i * 3);
+    }
+}

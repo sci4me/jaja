@@ -2,12 +2,11 @@
 #define HASH_TABLE_H
 
 #include <assert.h>
+#include <stdio.h>
 
 #include "types.h"
 #include "hash.h"
 #include "allocator.h"
-
-#include <stdio.h>
 
 #define HT_STATE_EMPTY 0
 #define HT_STATE_OCCUPIED 1
@@ -44,6 +43,11 @@ struct Hash_Table {
             values = (V*) ALLOC(allocator, size * sizeof(V));
             state = (u8*) ALLOC(allocator, size * sizeof(u8));
 
+            memset(keys, 0, size * sizeof(K)); 
+            memset(values, 0, size * sizeof(V)); 
+            memset(state, 0, size * sizeof(u8)); 
+
+            count = 0;
             for(u32 i = 0; i < old_size; i++) {
                 if(old_state[i]) put(old_keys[i], old_values[i]);
             }
@@ -56,10 +60,16 @@ struct Hash_Table {
 
     Hash_Table(u64 (*_hash_fn)(K data), bool (*_eq_fn)(K a, K b) = default_eq_fn, u32 _size = 16, Allocator _allocator = cstdlib_allocator) : allocator(_allocator), hash_fn(_hash_fn), eq_fn(_eq_fn), size(_size) {
         assert(size > 0);
+
         count = 0;
+
         keys = (K*) ALLOC(allocator, size * sizeof(K));
         values = (V*) ALLOC(allocator, size * sizeof(V));
         state = (u8*) ALLOC(allocator, size * sizeof(u8));
+        
+        memset(keys, 0, size * sizeof(K)); 
+        memset(values, 0, size * sizeof(V)); 
+        memset(state, 0, size * sizeof(u8)); 
     }
 
     ~Hash_Table() {

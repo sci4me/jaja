@@ -105,6 +105,8 @@ u32 Heap::mark(Allocation *a) {
 
 	// assert(v.a->next != v.a);
 
+	if(a->marked) return 0;
+
 	a->marked = true;
 
 	u32 marked = 1;

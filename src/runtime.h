@@ -104,8 +104,9 @@ struct Stack {
 struct Scope {
 	Scope *parent;
 	Hash_Table<char*, Value> values;
+	bool popped;
 
-	Scope(Scope *_parent) : parent(_parent), values(Hash_Table<char*, Value>(hash_string, eq_string)) {}
+	Scope(Scope *_parent) : parent(_parent), values(Hash_Table<char*, Value>(hash_string, eq_string)), popped(false) {}
 
 	Scope *push();
 	void pop(Heap *heap);

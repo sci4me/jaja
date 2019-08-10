@@ -59,8 +59,6 @@ Value Stack::peek() {
 }
 
 void Stack::set_top(Value v) {
-	if(v.a) assert(v.a == v.a->value.a);
-
 	assert(data.count > 0);
 	
 	auto old = data.data[data.count - 1];
@@ -70,18 +68,12 @@ void Stack::set_top(Value v) {
 }
 
 void Scope::set(char *key, Value value) {
-	if(value.a) assert(value.a == value.a->value.a);
-
-	Scope *curr = this;
-	while(curr) {
+	for(Scope *curr = this; curr; curr = curr->parent) {
 		if(curr->contains(key)) {
-			curr->values.put(key, value);			
+			curr->values.put(key, value);
 			return;
 		}
-
-		curr = curr->parent;
 	}
-
 	values.put(key, value);
 }
 
@@ -105,9 +97,11 @@ bool Scope::contains(char *key) {
 }
 
 void Scope::pop(Heap *heap) {
-	FOR((&values), i) {
-		auto v = values.values[i];
-		// if(v.a) heap->unmark_root(v.a);
+	for(u32 i = 0; i < values.size; i++) {
+		if(values.state[i] == HT_STATE_OCCUPIED) {
+			auto v = values.values[i];
+			if(v.a) heap->unmark_root(v.a);
+		}
 	}
 }
 
@@ -139,12 +133,15 @@ static u64 __value_hash(Value v) {
 static void call(Value v, Heap *heap, Scope *scope, Stack *stack) {
 	assert(v.type == VALUE_LAMBDA || v.type == VALUE_NATIVE);
 
+	auto s = Scope(scope);
+
 	if(v.type == VALUE_LAMBDA && heap->allocations.index_of(v.a) == -1) {
 		assert(false);
 	}
-	// if(v.type == VALUE_LAMBDA && v.a) heap->mark_root(v.a);
-	(*v.lambda.fn)(heap, scope, stack);
-	// if(v.type == VALUE_LAMBDA && v.a) heap->unmark_root(v.a);
+	
+	if(v.type == VALUE_LAMBDA && v.a) heap->mark_root(v.a);
+	(*v.lambda.fn)(heap, &s, stack);
+	if(v.type == VALUE_LAMBDA && v.a) heap->unmark_root(v.a);
 }
 
 void __rt_eq(Stack *stack) {
@@ -193,8 +190,7 @@ void __rt_cond_exec(Heap *heap, Scope *scope, Stack *stack) {
 	assert(body.type == VALUE_LAMBDA);
 
 	if(cond.is_truthy()) {
-		auto s = Scope(scope);
-		call(body, heap, &s, stack);
+		call(body, heap, scope, stack);
 	}
 }
 
@@ -508,7 +504,7 @@ void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn) {
 }
 
 void __rt_epilogue(Scope *scope, Heap *heap) {
-	scope->pop(heap);
+	// scope->pop(heap);
 }
 
 void __std_print(Heap *heap, Scope *scope, Stack *stack) {
@@ -537,7 +533,7 @@ void __std_print(Heap *heap, Scope *scope, Stack *stack) {
 			break;
 		case VALUE_LAMBDA:
 			// TODO
-			printf("λ");
+			printf("λ:%p", v.a);
 			break;
 	}
 }

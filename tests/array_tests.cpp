@@ -91,6 +91,7 @@ DEFINE_TEST(array_expands_as_needed) {
 	for(u32 i = 0; i < n; i++) a.push(i);
 
 	assert(a.size == n * 2);
+	for(u32 i = 0; i < n; i++) assert(a.data[i] == i);
 }
 
 DEFINE_TEST(array_for_macro_works) {
@@ -101,4 +102,16 @@ DEFINE_TEST(array_for_macro_works) {
 	FOR((&a), i) {
 		assert(a.data[i] == i);
 	}
+}
+
+DEFINE_TEST(array_stress_test) {
+	auto a = Array<u32>();
+
+	const u32 n = 10000;
+
+	for(u32 i = 0; i < n; i++) a.push(i * 3);
+
+	assert(a.count == n);
+
+	for(u32 i = 0; i < n; i++) assert(a.data[i] == i * 3);
 }
