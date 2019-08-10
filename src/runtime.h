@@ -96,8 +96,12 @@ struct Stack {
 
 	void push(Value *v);
 	Value pop();
+	void pop_into(Value *v);
 	Value* peek();
 	void set_top(Value v);
+
+	void swap();
+	void rot();
 };
 
 struct Scope {
@@ -110,7 +114,7 @@ struct Scope {
 	void pop(Heap *heap);
 
 	void set(char *key, Value value);
-	Value get(char *key);
+	Value* get(char *key);
 	bool contains(char *key);
 };
 
@@ -136,10 +140,6 @@ void __rt_newobj(Stack *stack, Heap *heap);
 void __rt_get_prop(Stack *stack);
 void __rt_set_prop(Stack *stack);
 
-void __rt_swap(Stack *stack);
-void __rt_rot(Stack *stack);
-
-void __rt_load(Stack *stack, Scope *scope);
 void __rt_store(Heap *heap, Scope *scope, Stack *stack);
 
 void __rt_while(Heap *heap, Scope *scope, Stack *stack);

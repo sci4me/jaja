@@ -118,6 +118,22 @@ _return_zero:
         return x;
     }
 
+    V* get_ptr(K key) {
+        u64 index = hash_fn(key) % size;
+        for(;;) {
+            index &= (size - 1);
+            if(state[index] == HT_STATE_OCCUPIED && eq_fn(keys[index], key)) {
+                return &values[index];
+            } else if(state[index] == HT_STATE_EMPTY) {
+                goto _return_zero;
+            }
+            index++;
+        }
+
+_return_zero:
+        return 0;
+    }
+
     bool contains_key(K key) {
         u64 index = hash_fn(key) % size;
         for(;;) {

@@ -186,14 +186,68 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_call_method(j, &Array<Value>::drop);
 			break;
 		case AST_OP_SWAP:
-			JIT_RT_CALL_2(__rt_swap);
+#ifdef JIT_DEBUG
+			jit_comment(j, "__rt_swap");
+#endif
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_call_method(j, &Stack::swap);
 			break;
 		case AST_OP_ROT:
-			JIT_RT_CALL_2(__rt_rot);
+#ifdef JIT_DEBUG
+			jit_comment(j, "__rt_rot");
+#endif
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_call_method(j, &Stack::rot);
 			break;
-		case AST_OP_LOAD:
-			JIT_RT_CALL_21(__rt_load);
+		case AST_OP_LOAD: {
+#ifdef JIT_DEBUG
+			jit_comment(j, "__rt_load");
+#endif
+			auto i = jit_allocai(j, sizeof(Value));
+			jit_addi(j, R(3), R_FP, i);
+
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_putargr(j, R(3));
+			jit_call_method(j, &Stack::pop_into);
+
+#ifndef NDEBUG
+			jit_ldxi(j, R(4), R(3), offsetof(Value, type), sizeof(Value::type));
+
+			auto l = jit_beqi(j, 0, R(4), VALUE_REFERENCE);
+			jit_prepare(j);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_call(j, __assert_fail);
+			jit_patch(j, l);
+#endif
+
+			jit_ldxi(j, R(4), R(3), offsetof(Value, string), sizeof(Value::string));
+
+			jit_prepare(j);
+			jit_putargr(j, R(1));
+			jit_putargr(j, R(4));
+			jit_call_method(j, &Scope::get);
+			jit_retval(j, R(4));
+
+			auto l2 = jit_bnei(j, 0, R(4), 0);
+			jit_movi(j, R(5), 0);
+			jit_stxi(j, offsetof(Value, a), R(3), R(5), sizeof(Value::a));
+			jit_movi(j, R(5), VALUE_NIL);
+			jit_stxi(j, offsetof(Value, type), R(3), R(5), sizeof(Value::type));
+			jit_movr(j, R(4), R(3));
+			jit_patch(j, l2);
+
+			jit_prepare(j);
+			jit_putargr(j, R(2));
+			jit_putargr(j, R(4));
+			jit_call_method(j, &Stack::push);
 			break;
+		}
 		case AST_OP_STORE:
 			JIT_RT_CALL_012(__rt_store);
 			break;

@@ -53,6 +53,12 @@ Value Stack::pop() {
 	return x;
 }
 
+void Stack::pop_into(Value *v) {
+	auto x = data.pop();
+	if(x.a) heap->unmark_root(x.a);
+	*v = x;
+}
+
 Value* Stack::peek() {
 	assert(data.count > 0);
 	return &data.data[data.count - 1];
@@ -67,6 +73,24 @@ void Stack::set_top(Value v) {
 	if(v.a) heap->mark_root(v.a);
 }
 
+void Stack::swap() {
+	assert(data.count > 1);
+	auto x = data.data[data.count - 1];
+	data.data[data.count - 1] = data.data[data.count - 2];
+	data.data[data.count - 2] = x;
+}
+
+void Stack::rot() {
+	// TODO fix this
+	assert(data.count > 2);
+	auto x = data.data[data.count - 1];
+	auto y = data.data[data.count - 2];
+	auto z = data.data[data.count - 3];
+	data.data[data.count - 1] = z;
+	data.data[data.count - 2] = x;
+	data.data[data.count - 3] = y;
+}
+
 void Scope::set(char *key, Value value) {
 	for(Scope *curr = this; curr; curr = curr->parent) {
 		if(curr->contains(key)) {
@@ -77,19 +101,17 @@ void Scope::set(char *key, Value value) {
 	values.put(key, value);
 }
 
-Value Scope::get(char *key) {
+Value* Scope::get(char *key) {
 	Scope *curr = this;
 	while(curr) {
 		if(curr->contains(key)) {
-			return curr->values.get(key);
+			return curr->values.get_ptr(key);
 		}
 
 		curr = curr->parent;
 	}
 
-	Value v;
-	v.type = VALUE_NIL;
-	return v;
+	return 0;
 }
 
 bool Scope::contains(char *key) {
@@ -371,31 +393,6 @@ void __rt_set_prop(Stack *stack) {
 	object.object->put(key, value);
 }
 
-void __rt_swap(Stack *stack) {
-	auto a = stack->pop();
-	auto b = stack->pop();
-	stack->push(&a);
-	stack->push(&b);
-}
-
-void __rt_rot(Stack *stack) {
-	auto a = stack->pop();
-	auto b = stack->pop();
-	auto c = stack->pop();
-	stack->push(&a);
-	stack->push(&c);
-	stack->push(&b);
-}
-
-void __rt_load(Stack *stack, Scope *scope) {
-	auto key = stack->pop();
-
-	assert(key.type == VALUE_REFERENCE);
-	
-	auto x = scope->get(key.string);
-	stack->push(&x);
-}
-
 void __rt_store(Heap *heap, Scope *scope, Stack *stack) {
 	auto key = stack->pop();
 	auto value = stack->pop();
@@ -404,7 +401,7 @@ void __rt_store(Heap *heap, Scope *scope, Stack *stack) {
 
 	auto old = scope->get(key.string);
 
-	if(old.a) heap->unmark_root(old.a);
+	if(old && old->a) heap->unmark_root(old->a);
 	if(value.a)	heap->mark_root(value.a);
 
 	scope->set(key.string, value);
