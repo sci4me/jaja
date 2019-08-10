@@ -4,6 +4,7 @@
 #include "ast.h"
 #include "runtime.h"
 #include "gc.h"
+#include "bitset.h"
 
 #define JIT_DEBUG
 
@@ -11,6 +12,7 @@
 
 struct Compiler {
 	Heap *heap;
+	Bitset registers;
 
 	Compiler(Heap *_heap) : heap(_heap) {}
 
