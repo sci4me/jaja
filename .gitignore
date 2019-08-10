@@ -4,7 +4,7 @@
 src/*.o
 tests/*.o
 
-se
-se-tests
+jaja
+jaja-tests
 
 tests/test_setup.cpp

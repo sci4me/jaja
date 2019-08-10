@@ -10,9 +10,9 @@ TEST_SOURCES=$(wildcard $(TESTS_DIR)/*.cpp)
 TEST_OBJECTS=$(patsubst %.cpp,%.o,$(filter %.cpp,$(TEST_SOURCES)))
 EXTRA_OBJECTS=$(wildcard $(LIB_OBJS_DIR)/*.o)
 
-TEST_EXECUTABLE=se-tests
+TEST_EXECUTABLE=jaja-tests
 
-EXECUTABLE=se
+EXECUTABLE=jaja
 LDFLAGS=
 CXXFLAGS=
 
