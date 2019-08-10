@@ -29,18 +29,21 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 
 	FOR(ast, i) {
 		auto node = ast->data[i];
-		switch(node->node_type) {
+		switch(node->type) {
 			case NODE_LAMBDA:
-				compile_lambda(j, static_cast<LambdaNode*>(node));
+				compile_lambda(j, node);
 				break;
-			case NODE_INSTRUCTION:
-				compile_instruction(j, static_cast<InstructionNode*>(node));
-				break;
-			case NODE_CONSTANT:
-				compile_constant(j, static_cast<ConstantNode*>(node));
+			case NODE_TRUE:
+			case NODE_FALSE:
+			case NODE_NIL:
+			case NODE_NUMBER:
+			case NODE_STRING:
+			case NODE_REFERENCE:
+				compile_constant(j, node);
 				break;
 			default:
-				assert(false);
+				compile_instruction(j, node);
+				break;
 		}
 	}
 
@@ -71,8 +74,8 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 	return result;
 }
 
-void Compiler::compile_lambda(jit *j, LambdaNode *n) {
-	auto l = compile_raw(&n->body);
+void Compiler::compile_lambda(jit *j, Node *n) {
+	auto l = compile_raw(&n->lambda);
 
 #ifdef JIT_DEBUG
 	jit_comment(j, "__rt_push_lambda");
@@ -101,7 +104,7 @@ void Compiler::compile_lambda(jit *j, LambdaNode *n) {
 	#define JIT_RT_CALL_012(fn) jit_prepare(j); jit_putargr(j, R(0)); jit_putargr(j, R(1)); jit_putargr(j, R(2)); jit_call(j, fn);
 #endif
 
-void Compiler::compile_instruction(jit *j, InstructionNode *n) {
+void Compiler::compile_instruction(jit *j, Node *n) {
 	switch(n->op) {
 		case AST_OP_EQ:
 			JIT_RT_CALL_2(__rt_eq);
@@ -180,18 +183,18 @@ void Compiler::compile_instruction(jit *j, InstructionNode *n) {
 	}
 }
 
-void Compiler::compile_constant(jit *j, ConstantNode *n) {
+void Compiler::compile_constant(jit *j, Node *n) {
 	switch(n->type) {
-		case AST_CONST_TRUE:
+		case NODE_TRUE:
 			JIT_RT_CALL_2(__rt_push_true);
 			break;
-		case AST_CONST_FALSE:
+		case NODE_FALSE:
 			JIT_RT_CALL_2(__rt_push_false);
 			break;
-		case AST_CONST_NIL:
+		case NODE_NIL:
 			JIT_RT_CALL_2(__rt_push_nil);
 			break;
-		case AST_CONST_NUMBER:
+		case NODE_NUMBER:
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_push_number");
 #endif
@@ -200,7 +203,7 @@ void Compiler::compile_constant(jit *j, ConstantNode *n) {
 			jit_putargi(j, n->number);
 			jit_call(j, __rt_push_number);
 			break;
-		case AST_CONST_STRING: {
+		case NODE_STRING: {
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_push_string");
 #endif
@@ -210,7 +213,7 @@ void Compiler::compile_constant(jit *j, ConstantNode *n) {
 			jit_call(j, __rt_push_string);
 			break;
 		}
-		case AST_CONST_REFERENCE:
+		case NODE_REFERENCE:
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_push_reference");
 #endif
@@ -220,6 +223,7 @@ void Compiler::compile_constant(jit *j, ConstantNode *n) {
 			jit_call(j, __rt_push_reference);
 			break;
 		default:
+			assert(false);
 			break;
 	}
 }

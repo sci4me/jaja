@@ -8,14 +8,15 @@ extern "C" {
 #include "hash_table.h"
 #include "array.h"
 
-#define VALUE_TRUE 0
-#define VALUE_FALSE 1
-#define VALUE_NIL 2
-#define VALUE_NUMBER 3
-#define VALUE_STRING 4
-#define VALUE_REFERENCE 5
-#define VALUE_OBJECT 6
-#define VALUE_LAMBDA 7
+#define VALUE_TRUE 			0x00
+#define VALUE_FALSE			0x01
+#define VALUE_NIL 			0x02
+#define VALUE_NUMBER 		0x03
+#define VALUE_STRING 		0x04
+#define VALUE_REFERENCE 	0x05
+#define VALUE_OBJECT 		0x06
+#define VALUE_LAMBDA 		0x07
+#define VALUE_NATIVE 		0x08
 
 #define HEAP_DEBUG
 
@@ -67,9 +68,12 @@ struct Allocation {
 };
 
 struct Heap {
+	Allocator allocator;
+
 	Array<Allocation*> allocations;
 	Array<Allocation*> roots;
 
+	Heap(Allocator _allocator = cstdlib_allocator) : allocator(_allocator) {}
 	~Heap();
 
 #ifdef HEAP_DEBUG
@@ -86,7 +90,10 @@ struct Heap {
 };
 
 struct Stack {
+	Heap *heap;
 	Array<Value> data;
+
+	Stack(Heap *_heap) : heap(_heap) { }
 
 	void push(Value v);
 	Value pop();

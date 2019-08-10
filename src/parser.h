@@ -12,8 +12,7 @@ private:
 	Lexer lexer;
 
 	Node* parse_any();
-
-	LambdaNode* parse_lambda();
+	Node* parse_lambda();
 
 public:
 	Parser(Allocator allocator, char *file, char *source);

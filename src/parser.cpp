@@ -4,10 +4,8 @@
 
 #include "parser.h"
 
-#define AST_NEW(type) (type*) ALLOC(allocator, sizeof(type))
-#define AST_NEW_CONSTANT(name) auto name = AST_NEW(ConstantNode); name->node_type = NODE_CONSTANT;
-#define AST_NEW_INSTRUCTION(name) auto name = AST_NEW(InstructionNode); name->node_type = NODE_INSTRUCTION;
-#define AST_NEW_LAMBDA(name) auto name = AST_NEW(LambdaNode); name->node_type = NODE_LAMBDA;
+#define AST_NEW(name) auto name = (Node*) ALLOC(allocator, sizeof(Node));
+#define AST_NEW_INSTRUCTION(name) AST_NEW(name) name->type = NODE_INSTRUCTION;
 
 Parser::Parser(Allocator _allocator, char *file, char *source) : allocator(_allocator), lexer(Lexer(_allocator, file, source)) {
 }
@@ -18,35 +16,35 @@ Node* Parser::parse_any() {
 
 	switch(t.type) {
 		case TRUE: {
-			AST_NEW_CONSTANT(x)
-			x->type = AST_CONST_TRUE;
+			AST_NEW(x)
+			x->type = NODE_TRUE;
 			return x;
 		}
 		case FALSE: {
-			AST_NEW_CONSTANT(x)
-			x->type = AST_CONST_FALSE;
+			AST_NEW(x)
+			x->type = NODE_FALSE;
 			return x;
 		}
 		case NIL: {
-			AST_NEW_CONSTANT(x)
-			x->type = AST_CONST_NIL;
+			AST_NEW(x)
+			x->type = NODE_NIL;
 			return x;
 		}
 		case NUMBER: {
-			AST_NEW_CONSTANT(x)
-			x->type = AST_CONST_NUMBER;
+			AST_NEW(x)
+			x->type = NODE_NUMBER;
 			x->number = strtoll(t.raw, 0, 0);
 			return x;
 		}
 		case STRING: {
-			AST_NEW_CONSTANT(x)
-			x->type = AST_CONST_STRING;
+			AST_NEW(x)
+			x->type = NODE_STRING;
 			x->string = t.raw;
 			return x;
 		}
 		case REFERENCE: {
-			AST_NEW_CONSTANT(x)
-			x->type = AST_CONST_REFERENCE;
+			AST_NEW(x)
+			x->type = NODE_REFERENCE;
 			x->string = t.raw;
 			return x;
 		}
@@ -180,16 +178,17 @@ Node* Parser::parse_any() {
 	}
 }
 
-LambdaNode* Parser::parse_lambda() {
-	AST_NEW_LAMBDA(result)
-	result->body = Array<Node*>();
-	result->body.allocator = allocator;
+Node* Parser::parse_lambda() {
+	AST_NEW(result)
+	result->type = NODE_LAMBDA;
+	result->lambda = Array<Node*>();
+	result->lambda.allocator = allocator;
 
 	while(lexer.has_token()) {
 		if(lexer.get_token().type == LAMBDA_END) {
 			break;
 		} else {
-			result->body.push(parse_any());
+			result->lambda.push(parse_any());
 		}
 	}
 

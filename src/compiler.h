@@ -14,9 +14,9 @@ struct Compiler {
 
 	Value compile(Array<Node*>* ast);
 	Lambda compile_raw(Array<Node*>* ast);
-	void compile_lambda(jit *j, LambdaNode *n);
-	void compile_instruction(jit *j, InstructionNode *n);
-	void compile_constant(jit *j, ConstantNode *n);
+	void compile_lambda(jit *j, Node *n);
+	void compile_instruction(jit *j, Node *n);
+	void compile_constant(jit *j, Node *n);
 };
 
 #endif

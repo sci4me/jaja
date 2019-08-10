@@ -43,11 +43,14 @@ bool Value::operator==(const Value &other) {
 }
 
 void Stack::push(Value v) {
+	if(v.a) heap->mark_root(v.a);
 	data.push(v);
 }
 
 Value Stack::pop() {
-	return data.pop();
+	auto x = data.pop();
+	if(x.a) heap->unmark_root(x.a);
+	return x;
 }
 
 Value Stack::peek() {
@@ -56,11 +59,19 @@ Value Stack::peek() {
 }
 
 void Stack::set_top(Value v) {
+	if(v.a) assert(v.a == v.a->value.a);
+
 	assert(data.count > 0);
+	
+	auto old = data.data[data.count - 1];
+	if(old.a) heap->unmark_root(old.a); 
 	data.data[data.count - 1] = v;
+	if(v.a) heap->mark_root(v.a);
 }
 
 void Scope::set(char *key, Value value) {
+	if(value.a) assert(value.a == value.a->value.a);
+
 	Scope *curr = this;
 	while(curr) {
 		if(curr->contains(key)) {
@@ -96,7 +107,7 @@ bool Scope::contains(char *key) {
 void Scope::pop(Heap *heap) {
 	FOR((&values), i) {
 		auto v = values.values[i];
-		if(v.a) heap->unmark_root(v.a);
+		// if(v.a) heap->unmark_root(v.a);
 	}
 }
 
@@ -125,8 +136,15 @@ static u64 __value_hash(Value v) {
 	return 0;
 }
 
-static bool __value_eq(Value a, Value b) {
-	return a == b;
+static void call(Value v, Heap *heap, Scope *scope, Stack *stack) {
+	assert(v.type == VALUE_LAMBDA || v.type == VALUE_NATIVE);
+
+	if(v.type == VALUE_LAMBDA && heap->allocations.index_of(v.a) == -1) {
+		assert(false);
+	}
+	// if(v.type == VALUE_LAMBDA && v.a) heap->mark_root(v.a);
+	(*v.lambda.fn)(heap, scope, stack);
+	// if(v.type == VALUE_LAMBDA && v.a) heap->unmark_root(v.a);
 }
 
 void __rt_eq(Stack *stack) {
@@ -144,7 +162,7 @@ void __rt_lt(Stack *stack) {
 
 	Value c;
 
-	if((a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) || (a.type == VALUE_REFERENCE && b.type == VALUE_REFERENCE)) {
+	if(a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) {
 		c.type = a.number < b.number ? VALUE_TRUE : VALUE_FALSE;
 	} else {
 		assert(false);
@@ -159,8 +177,7 @@ void __rt_gt(Stack *stack) {
 
 	Value c;
 
-	if((a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) || 
-		(a.type == VALUE_REFERENCE && b.type == VALUE_REFERENCE)) {
+	if(a.type == VALUE_NUMBER && b.type == VALUE_NUMBER) {
 		c.type = a.number > b.number ? VALUE_TRUE : VALUE_FALSE;
 	} else {
 		assert(false);
@@ -177,20 +194,13 @@ void __rt_cond_exec(Heap *heap, Scope *scope, Stack *stack) {
 
 	if(cond.is_truthy()) {
 		auto s = Scope(scope);
-		if(body.a) heap->mark_root(body.a);
-		(*body.lambda.fn)(heap, &s, stack);
-		if(body.a) heap->unmark_root(body.a);
+		call(body, heap, &s, stack);
 	}
 }
 
 void __rt_exec(Heap *heap, Scope *scope, Stack *stack) {
 	auto lambda = stack->pop();
-
-	assert(lambda.type == VALUE_LAMBDA);
-
-	if(lambda.a) heap->mark_root(lambda.a);
-	(*lambda.lambda.fn)(heap, scope, stack);
-	if(lambda.a) heap->unmark_root(lambda.a);
+	call(lambda, heap, scope, stack);
 }
 
 void __rt_and(Stack *stack) {
@@ -345,7 +355,7 @@ void __rt_newobj(Stack *stack, Heap *heap) {
 	auto v = GC_ALLOC(heap);
 	v->type = VALUE_OBJECT;
 	v->object = (Hash_Table<Value, Value>*) malloc(sizeof(Hash_Table<Value, Value>));
-	*v->object = Hash_Table<Value, Value>(__value_hash, __value_eq);
+	*v->object = Hash_Table<Value, Value>(__value_hash);
 	stack->push(*v);
 }
 
@@ -413,7 +423,7 @@ void __rt_store(Heap *heap, Scope *scope, Stack *stack) {
 	assert(key.type == VALUE_REFERENCE);
 
 	auto old = scope->get(key.string);
-	
+
 	if(old.a) heap->unmark_root(old.a);
 	if(value.a)	heap->mark_root(value.a);
 
@@ -424,11 +434,11 @@ void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
 	auto body = stack->pop();
 	auto cond = stack->pop();
 
-	assert(body.type == VALUE_LAMBDA);
-	assert(cond.type == VALUE_LAMBDA);
+	assert(body.type == VALUE_LAMBDA || body.type == VALUE_NATIVE);
+	assert(cond.type == VALUE_LAMBDA || cond.type == VALUE_NATIVE);
 
-	if(body.a) heap->mark_root(body.a);
-	if(cond.a) heap->mark_root(cond.a);
+	if(body.type == VALUE_LAMBDA && body.a) heap->mark_root(body.a);
+	if(cond.type == VALUE_LAMBDA && cond.a) heap->mark_root(cond.a);
 
 	for(;;) {
 		(*cond.lambda.fn)(heap, scope, stack);
@@ -490,6 +500,7 @@ void __rt_push_reference(Stack *stack, char *r) {
 
 void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn) {
 	auto v = GC_ALLOC(heap);
+	assert(heap->allocations.index_of(v->a) != -1);
 	v->type = VALUE_LAMBDA;
 	v->lambda.j = j;
 	v->lambda.fn = fn;

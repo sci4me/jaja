@@ -37,6 +37,8 @@ s32 main(s32 argc, char **argv) {
 	u32 failed = 0;
 	u32 passed = 0;
 
+	printf("Running %u tests from %u files...\n", test_count, file_count);
+
 	for(u32 i = 0; i < file_count; i++) {
 		auto file = files[i];
 

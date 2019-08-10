@@ -1,6 +1,5 @@
-#include <stdlib.h>
-
 #include "runtime.h"
+#include "allocator.h"
 
 // TODO make GC/Heap _MUCH_ better
 //  - objects want the ability to have multiple allocations that get marked when that object gets marked
@@ -14,13 +13,13 @@
 //  - proper tracking of memory usage and limits
 //  - resizing (i.e. get bigger when needed and smaller when it makes sense*)
 
-static void free_allocation(Allocation *a) {
+static void free_allocation(Allocator allocator, Allocation *a) {
 	switch(a->value.type) {
 		case VALUE_STRING:
 		case VALUE_REFERENCE:
 			break;
 		case VALUE_OBJECT:
-			free(a->value.object);
+			FREE(allocator, a->value.object);
 			break;
 		case VALUE_LAMBDA:
 			// TODO why is this no bueno?
@@ -28,12 +27,12 @@ static void free_allocation(Allocation *a) {
 			break;
 	}
 
-	free(a);
+	FREE(allocator, a);
 }
 
 Heap::~Heap() {
 	FOR((&allocations), i) {
-		free_allocation(allocations.pop());	
+		free_allocation(allocator, allocations.pop());	
 	}
 }
 
@@ -46,7 +45,7 @@ Value* Heap::alloc() {
 		gc();
 	}
 
-	auto a = (Allocation*) malloc(sizeof(Allocation));
+	auto a = (Allocation*) ALLOC(allocator, sizeof(Allocation));
 #ifdef HEAP_DEBUG
 	a->line = line;
 	a->func = func;
@@ -61,16 +60,17 @@ Value* Heap::alloc() {
 
 void Heap::mark_root(Allocation *a) {
 	assert(a);
-	assert(a->value.a == a);
+	// if(allocations.index_of(a) == -1) return;
+	// assert(a->value.a == a);
 	assert(allocations.index_of(a) != -1);
 
-	// TODO should we really allow this if statement?
-	if(roots.index_of(a) == -1) roots.push(a);
+	roots.push(a);
 }
 
 void Heap::unmark_root(Allocation *a) {
 	assert(a);
-	assert(a->value.a == a);
+	// if(allocations.index_of(a) == -1) return;
+	// assert(a->value.a == a);
 	assert(allocations.index_of(a) != -1);
 
 	auto i = roots.index_of(a);
@@ -95,12 +95,12 @@ void Heap::gc() {
 
 	u32 swept = sweep();
 
-	// printf("\nGC Cycle:\n\tstart:  %u\n\tmarked: %u\n\tswept:  %u\n\tmissing: %u\n\tend: %u\n", total, marked, swept, total - (marked + swept), allocations.count);
+	printf("\nGC Cycle:\n\tstart:  %u\n\tmarked: %u\n\tswept:  %u\n\tmissing: %u\n\tend: %u\n", total, marked, swept, total - (marked + swept), allocations.count);
 }
 
 u32 Heap::mark(Allocation *a) {
 	assert(a);
-	assert(a->value.a == a);
+	// assert(a->value.a == a);
 	assert(allocations.index_of(a) != -1);
 
 	// assert(v.a->next != v.a);
@@ -135,7 +135,7 @@ u32 Heap::sweep() {
 	FOR((&to_remove), i) {
 		auto x = to_remove.data[i];
 		allocations.unordered_remove(allocations.index_of(x));
-		free_allocation(x);
+		free_allocation(allocator, x);
 	}
 
 	return to_remove.count;

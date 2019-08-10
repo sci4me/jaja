@@ -7,7 +7,7 @@
 #include "gc.h"
 #include "arena.h"
 
-#define ADD_STD_FN(g, func, name) { Value v; v.a = 0; v.type = VALUE_LAMBDA; v.lambda.fn = func; g.set((char*)name, v); }
+#define ADD_STD_FN(g, func, name) { Value v; v.a = 0; v.type = VALUE_NATIVE; v.lambda.fn = func; g.set((char*)name, v); }
 
 s32 main(s32 argc, char **argv) {
 	if(argc != 2) {
@@ -26,6 +26,11 @@ s32 main(s32 argc, char **argv) {
 	auto ast = p.parse();
 	free(source);
 
+	// FOR(ast, i) {
+	// 	ast->data[i]->print_as_bytecode();
+	// }
+	// printf("\n");
+
 	auto heap = Heap();
 	auto compiler = Compiler(&heap);
 	
@@ -38,9 +43,20 @@ s32 main(s32 argc, char **argv) {
 	ADD_STD_FN(G, __std_print, "print");
 	ADD_STD_FN(G, __std_println, "println");
 
-	auto stack = Stack();
-	
+	auto stack = Stack(&heap);
+
 	(*main.lambda.fn)(&heap, &G, &stack);
+
+	// just for fun
+	while(stack.data.count) stack.pop();
+	G.pop(&heap);
+	heap.unmark_root(main.a);
+	heap.gc();
+
+	FOR((&heap.allocations), i) {
+		auto a = heap.allocations.data[i];
+		printf("root (%p) : %s@%s:%u\n", a, a->func, a->file, a->line);
+	}
 
 	return 0;
 }

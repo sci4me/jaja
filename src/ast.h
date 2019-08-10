@@ -4,23 +4,14 @@
 #include "types.h"
 #include "array.h"
 
-// TODO: convert this to be a tagged union instead of inheritance?
-
-#define NODE_LAMBDA 0
-#define NODE_INSTRUCTION 1
-#define NODE_CONSTANT 2
-
-struct Node {
-	u8 node_type;
-
-	Node(u8 _type) : node_type(_type) {}
-};
-
-struct LambdaNode : public Node {
-	Array<Node*> body;
-
-	LambdaNode() : Node(NODE_LAMBDA) {}
-};
+#define NODE_LAMBDA 			0x00
+#define NODE_INSTRUCTION 		0x01
+#define NODE_TRUE 				0x02
+#define NODE_FALSE 				0x03
+#define NODE_NIL 				0x04
+#define NODE_STRING 			0x05
+#define NODE_NUMBER 			0x06
+#define NODE_REFERENCE 			0x07
 
 #define AST_OP_EQ 				0x00
 #define AST_OP_LT 				0x01
@@ -47,28 +38,16 @@ struct LambdaNode : public Node {
 #define AST_OP_STORE			0x16
 #define AST_OP_WHILE			0x17
 
-struct InstructionNode : public Node {
-	u8 op;
-
-	InstructionNode(u8 _op) : Node(NODE_INSTRUCTION), op(_op) {}
-};
-
-#define AST_CONST_TRUE 			((u8)0)
-#define AST_CONST_FALSE 		((u8)1)
-#define AST_CONST_NIL 			((u8)2)
-#define AST_CONST_NUMBER 		((u8)3)
-#define AST_CONST_STRING		((u8)4)
-#define AST_CONST_REFERENCE		((u8)5)
-
-struct ConstantNode : public Node {
+struct Node {
 	u8 type;
 	union {
+		Array<Node*> lambda;
+		u8 op;
 		s64 number;
 		char *string;
 	};
 
-	ConstantNode(u8 _type, s64 _number) : Node(NODE_CONSTANT), type(_type), number(_number) {} 
-	ConstantNode(u8 _type, char *_string) : Node(NODE_CONSTANT), type(_type), string(_string) {}
+	void print_as_bytecode(u32 level = 0);
 };
 
 #endif
