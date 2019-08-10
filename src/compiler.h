@@ -6,15 +6,22 @@
 #include "gc.h"
 #include "bitset.h"
 
-#define JIT_DEBUG
+// #define JIT_DEBUG
 
 #define jit_call_method(j, m) { auto fptr = m; jit_call(j, reinterpret_cast<void *&>(fptr)); }
+
+#define R_HEAP R(0)
+#define R_SCOPE R(1)
+#define R_STACK R(2)
 
 struct Compiler {
 	Heap *heap;
 	Bitset registers;
 
-	Compiler(Heap *_heap) : heap(_heap) {}
+	Compiler(Heap *_heap);
+
+	jit_value ralloc();
+	void rfree(jit_value r);
 
 	Value compile(Array<Node*>* ast);
 	Lambda compile_raw(Array<Node*>* ast);
