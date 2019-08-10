@@ -42,11 +42,6 @@ bool Value::operator==(const Value &other) {
 	return false;
 }
 
-void Stack::push(Value v) {
-	if(v.a) heap->mark_root(v.a);
-	data.push(v);
-}
-
 void Stack::push(Value *v) {
 	if(v->a) heap->mark_root(v->a);
 	data.push(*v);
@@ -356,7 +351,7 @@ void __rt_newobj(Stack *stack, Heap *heap) {
 	v->type = VALUE_OBJECT;
 	v->object = (Hash_Table<Value, Value>*) malloc(sizeof(Hash_Table<Value, Value>));
 	*v->object = Hash_Table<Value, Value>(__value_hash);
-	stack->push(*v);
+	stack->push(v);
 }
 
 void __rt_get_prop(Stack *stack) {
@@ -366,11 +361,12 @@ void __rt_get_prop(Stack *stack) {
 	assert(object.type == VALUE_OBJECT);
 
 	if(object.object->contains_key(key)) {
-		stack->push(object.object->get(key));
+		auto x = object.object->get(key);
+		stack->push(&x);
 	} else {
 		Value v;
 		v.type = VALUE_NIL;
-		stack->push(v);
+		stack->push(&v);
 	}
 }
 
@@ -385,7 +381,7 @@ void __rt_set_prop(Stack *stack) {
 }
 
 void __rt_dup(Stack *stack) {
-	stack->push(stack->data.data[stack->data.count - 1]);	
+	stack->push(&stack->data.data[stack->data.count - 1]);	
 }
 
 void __rt_drop(Stack *stack) {
@@ -395,25 +391,26 @@ void __rt_drop(Stack *stack) {
 void __rt_swap(Stack *stack) {
 	auto a = stack->pop();
 	auto b = stack->pop();
-	stack->push(a);
-	stack->push(b);
+	stack->push(&a);
+	stack->push(&b);
 }
 
 void __rt_rot(Stack *stack) {
 	auto a = stack->pop();
 	auto b = stack->pop();
 	auto c = stack->pop();
-	stack->push(a);
-	stack->push(c);
-	stack->push(b);
+	stack->push(&a);
+	stack->push(&c);
+	stack->push(&b);
 }
 
 void __rt_load(Stack *stack, Scope *scope) {
 	auto key = stack->pop();
 
 	assert(key.type == VALUE_REFERENCE);
-
-	stack->push(scope->get(key.string));
+	
+	auto x = scope->get(key.string);
+	stack->push(&x);
 }
 
 void __rt_store(Heap *heap, Scope *scope, Stack *stack) {
@@ -451,19 +448,6 @@ void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
 
 	if(body.a) heap->unmark_root(body.a);
 	if(cond.a) heap->unmark_root(cond.a);
-}
-
-void __rt_push_value(Stack *stack, Value *v) {
-	stack->push(*v);
-}
-
-void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn) {
-	auto v = GC_ALLOC(heap);
-	assert(heap->allocations.index_of(v->a) != -1);
-	v->type = VALUE_LAMBDA;
-	v->lambda.j = j;
-	v->lambda.fn = fn;
-	stack->push(*v);
 }
 
 void __std_print(Heap *heap, Scope *scope, Stack *stack) {

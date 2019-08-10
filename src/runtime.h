@@ -94,7 +94,6 @@ struct Stack {
 
 	Stack(Heap *_heap) : heap(_heap) { }
 
-	void push(Value v);
 	void push(Value *v);
 	Value pop();
 	Value peek();
@@ -146,9 +145,6 @@ void __rt_load(Stack *stack, Scope *scope);
 void __rt_store(Heap *heap, Scope *scope, Stack *stack);
 
 void __rt_while(Heap *heap, Scope *scope, Stack *stack);
-
-void __rt_push_value(Stack *stack, Value *v);
-void __rt_push_lambda(Stack *stack, Heap *heap, jit *j, lambda_fn fn);
 
 void __std_print(Heap *heap, Scope *scope, Stack *stack);
 void __std_println(Heap *heap, Scope *scope, Stack *stack);

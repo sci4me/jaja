@@ -5,7 +5,9 @@
 #include "runtime.h"
 #include "gc.h"
 
-#define JIT_DEBUG
+// #define JIT_DEBUG
+
+#define jit_call_method(j, m) { auto fptr = m; jit_call(j, reinterpret_cast<void *&>(fptr)); }
 
 struct Compiler {
 	Heap *heap;

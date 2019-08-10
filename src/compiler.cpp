@@ -72,12 +72,26 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 	jit_comment(j, "__rt_push_lambda");
 #endif
 
+	jit_movi(j, R(3), 0);
+	jit_prepare(j);
+	jit_putargr(j, R(0));
+	jit_putargr(j, R(3));
+	jit_putargr(j, R(3));
+	jit_putargr(j, R(3));
+	jit_call_method(j, &Heap::alloc);
+	jit_retval(j, R(3));
+
+	jit_movi(j, R(4), VALUE_LAMBDA);
+	jit_stxi(j, offsetof(Value, type), R(3), R(4), sizeof(Value::type));
+	jit_movi(j, R(4), l.j);
+	jit_stxi(j, offsetof(Value, lambda.j), R(3), R(4), sizeof(Value::lambda.j));
+	jit_movi(j, R(4), l.fn);
+	jit_stxi(j, offsetof(Value, lambda.fn), R(3), R(4), sizeof(Value::lambda.fn));
+
 	jit_prepare(j);
 	jit_putargr(j, R(2));
-	jit_putargr(j, R(0));
-	jit_putargi(j, l.j);
-	jit_putargi(j, l.fn);
-	jit_call(j, __rt_push_lambda);
+	jit_putargr(j, R(3));
+	jit_call_method(j, &Stack::push);
 }
 
 #define xstr(a) str(a)
@@ -191,7 +205,7 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_prepare(j);
 			jit_putargr(j, R(2));
 			jit_putargr(j, R(3));
-			jit_call(j, __rt_push_value);
+			jit_call_method(j, &Stack::push);
 			break;
 		}
 		case NODE_FALSE: {
@@ -209,7 +223,7 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_prepare(j);
 			jit_putargr(j, R(2));
 			jit_putargr(j, R(3));
-			jit_call(j, __rt_push_value);
+			jit_call_method(j, &Stack::push);
 			break;
 		}
 		case NODE_NIL: {
@@ -227,7 +241,7 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_prepare(j);
 			jit_putargr(j, R(2));
 			jit_putargr(j, R(3));
-			jit_call(j, __rt_push_value);
+			jit_call_method(j, &Stack::push);
 			break;
 		}
 		case NODE_NUMBER: {
@@ -247,7 +261,7 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_prepare(j);
 			jit_putargr(j, R(2));
 			jit_putargr(j, R(3));
-			jit_call(j, __rt_push_value);
+			jit_call_method(j, &Stack::push);
 			break;
 		}
 		case NODE_STRING: {
@@ -276,7 +290,7 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_prepare(j);
 			jit_putargr(j, R(2));
 			jit_putargr(j, R(4));
-			jit_call(j, __rt_push_value);
+			jit_call_method(j, &Stack::push);
 			break;
 		}
 		case NODE_REFERENCE: {
@@ -305,7 +319,7 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_prepare(j);
 			jit_putargr(j, R(2));
 			jit_putargr(j, R(4));
-			jit_call(j, __rt_push_value);
+			jit_call_method(j, &Stack::push);
 			break;
 		}
 		default:
