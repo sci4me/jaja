@@ -2,6 +2,8 @@
 
 #include "runtime.h"
 
+static Value NIL = Value(VALUE_NIL);
+
 bool Value::is_truthy() {
 	switch(type) {
 		case VALUE_FALSE:	
@@ -115,7 +117,7 @@ Value* Scope::get(char *key) {
 		curr = curr->parent;
 	}
 
-	return 0;
+	return &NIL;
 }
 
 bool Scope::contains(char *key) {

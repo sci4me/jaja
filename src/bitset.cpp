@@ -45,3 +45,14 @@ u64 Bitset::next_clear(u64 start) {
     while(get(n)) n++;
     return n;
 }
+
+u64 Bitset::bits_set() {
+    u64 n = 0;
+    for(u64 i = 0; i < data.count; i++) {
+        auto word = data.data[i];
+        for(auto j = 0; j < WORD_SIZE; j++) {
+            if(word & (1 << j)) n++;
+        }
+    }
+    return n;
+}

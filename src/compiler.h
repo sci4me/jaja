@@ -7,6 +7,21 @@
 #include "bitset.h"
 
 // #define JIT_DEBUG
+// #define JIT_RALLOC_TRACKING
+
+#ifdef JIT_RALLOC_TRACKING
+	struct RAllocation {
+		const char *func;
+		const char *file;
+		u32 line;
+	};
+
+	#define RALLOC() ralloc(__func__, __FILE__, __LINE__)
+#else
+	#define RALLOC() ralloc()
+#endif
+
+#define RFREE(x) rfree(x)
 
 #define jit_call_method(j, m) { auto fptr = m; jit_call(j, reinterpret_cast<void *&>(fptr)); }
 
@@ -17,12 +32,21 @@
 struct Compiler {
 	Heap *heap;
 
+	// TODO: track who allocated what where for reporting when assert(registers->bits_set() == 0) fails
+#ifdef JIT_RALLOC_TRACKING
+	Hash_Table<u64, RAllocation> *allocations;
+	Array<Hash_Table<u64, RAllocation>*> allocationsStack;
+#endif
 	Bitset *registers;
 	Array<Bitset*> registersStack;
 
 	Compiler(Heap *_heap) : heap(_heap), registers(0) {};
 
+#ifdef JIT_RALLOC_TRACKING
+	jit_value ralloc(const char *func, const char *file, const u32 line);
+#else
 	jit_value ralloc();
+#endif
 	void rfree(jit_value r);
 
 	Value compile(Array<Node*>* ast);

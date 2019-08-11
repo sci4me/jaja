@@ -12,6 +12,7 @@ struct Bitset {
     void toggle(u64 n);
     u64 next_set(u64 start = 0);
     u64 next_clear(u64 start = 0);
+    u64 bits_set();
 };
 
 #endif

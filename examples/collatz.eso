@@ -5,6 +5,12 @@ we can detect if statements as a lambda followed by the if instruction (?),
 and instead of compiling a lambda for the if body, just compile the code in directly
 }
 
+false ~ println ; !
+true ~ println ; !
+
+{[] test :}
+
+{
 [$2%0=$[^2/^]?~[3*1+]?]collatz:
 [n:0s:[n;1=~][n;collatz;!n:s;1+s:]#s;]steps:
 
@@ -17,6 +23,7 @@ and instead of compiling a lambda for the if body, just compile the code in dire
 
     1+
 ]#
+}
 
 {
 [

@@ -1,8 +1,19 @@
 #include "compiler.h"
 
+#ifdef JIT_RALLOC_TRACKING
+jit_value Compiler::ralloc(const char *func, const char *file, u32 line) {
+#else
 jit_value Compiler::ralloc() {
+#endif
 	u64 n = registers->next_clear();
 	registers->set(n);
+#ifdef JIT_RALLOC_TRACKING
+	allocations->put(n, {
+		.func = func,
+		.file = file,
+		.line = line
+	});
+#endif
 	return R(n);
 }
 
@@ -13,18 +24,28 @@ void Compiler::rfree(jit_value r) {
 
 	assert(registers->get(n));
 	registers->clear(n);
+
+#ifdef JIT_RALLOC_TRACKING
+	allocations->remove(n);
+#endif
 }
 
 Value Compiler::compile(Array<Node*>* ast) {
 	auto result = GC_ALLOC(heap);
 	result->type = VALUE_LAMBDA;
 	result->lambda = compile_raw(ast);
+	assert(registersStack.count == 0);
 	return *result;
 }
 
 Lambda Compiler::compile_raw(Array<Node*>* ast) {	
 	registersStack.push(registers);
 	registers = new Bitset();
+
+#ifdef JIT_RALLOC_TRACKING
+	allocationsStack.push(allocations);
+	allocations = new Hash_Table<u64, RAllocation>(hash_u64);
+#endif
 
 	registers->set(0);
 	registers->set(1);
@@ -85,8 +106,31 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 	printf("}\n");
 #endif
 
+	registers->clear(0);
+	registers->clear(1);
+	registers->clear(2);
+
+#ifdef JIT_RALLOC_TRACKING
+	auto n = registers->bits_set() ;
+	if(n) {
+		for(u32 i = 0; i < allocations->size; i++) {
+			if(allocations->state[i] == HT_STATE_OCCUPIED) {
+				auto a = allocations->values[i];
+				printf("ralloc (%u) : %s@%s:%u\n", allocations->keys[i], a.func, a.file, a.line);
+			}
+		}
+		fflush(stdout);
+		assert(false);
+	}
+#endif
+
 	delete registers;
 	registers = registersStack.pop();
+
+#ifdef JIT_RALLOC_TRACKING
+	delete allocations;
+	allocations = allocationsStack.pop();
+#endif
 
 	return result;
 }
@@ -98,10 +142,11 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 	jit_comment(j, "__rt_push_lambda");
 #endif
 
-	auto lambda = ralloc();
+	auto lambda = RALLOC();
 
 #ifdef HEAP_DEBUG
-	auto rz = ralloc();
+	auto rz = RALLOC();
+
 	jit_movi(j, rz, 0);
 	jit_prepare(j);
 	jit_putargr(j, R_HEAP);
@@ -111,7 +156,7 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 	jit_call_method(j, &Heap::alloc);
 	jit_retval(j, lambda);
 
-	rfree(rz);
+	RFREE(rz);
 #else
 	jit_prepare(j);
 	jit_putargr(j, R_HEAP);
@@ -119,7 +164,7 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 	jit_retval(j, lambda);
 #endif
 
-	auto tmp = ralloc();
+	auto tmp = RALLOC();
 	jit_movi(j, tmp, VALUE_LAMBDA);
 	jit_stxi(j, offsetof(Value, type), lambda, tmp, sizeof(Value::type));
 	jit_movi(j, tmp, l.j);
@@ -132,7 +177,8 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 	jit_putargr(j, lambda);
 	jit_call_method(j, &Stack::push);
 
-	rfree(lambda);
+	RFREE(lambda);
+	RFREE(tmp);
 }
 
 #define xstr(a) str(a)
@@ -173,9 +219,48 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 		case AST_OP_OR:
 			JIT_RT_CALL_2(__rt_or);
 			break;
-		case AST_OP_NOT:
-			JIT_RT_CALL_2(__rt_not);
+		case AST_OP_NOT: {
+			// JIT_RT_CALL_2(__rt_not);
+#ifdef JIT_DEBUG
+			jit_comment(j, "__rt_not");
+#endif
+			auto x = RALLOC();
+			auto type = RALLOC();
+			auto tmp = RALLOC();
+		
+			jit_prepare(j);
+			jit_putargr(j, R_STACK);
+			jit_call_method(j, &Stack::peek);
+			jit_retval(j, x);
+
+			jit_ldxi(j, type, x, offsetof(Value, type), sizeof(Value::type));
+
+			auto l1 = jit_bnei(j, 0, type, VALUE_TRUE);
+				jit_movi(j, tmp, VALUE_FALSE);
+				jit_stxi(j, offsetof(Value, type), x, tmp, sizeof(Value::type));
+			auto j1 = jit_jmpi(j, JIT_FORWARD);
+			jit_patch(j, l1);
+			auto l2 = jit_bnei(j, 0, type, VALUE_FALSE);
+				jit_movi(j, tmp, VALUE_TRUE);
+				jit_stxi(j, offsetof(Value, type), x, tmp, sizeof(Value::type));
+			auto j2 = jit_jmpi(j, JIT_FORWARD);
+			jit_patch(j, l2);
+#ifndef NDEBUG
+			jit_prepare(j);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_call(j, __assert_fail);
+#endif
+			jit_patch(j, j1);
+			jit_patch(j, j2);
+
+			RFREE(x);
+			RFREE(type);
+			RFREE(tmp);
 			break;
+		}
 		case AST_OP_ADD:
 			JIT_RT_CALL_2(__rt_add);
 			break;
@@ -205,9 +290,9 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_comment(j, "__rt_set_prop");
 #endif
 
-			auto value = ralloc();
-			auto key = ralloc();
-			auto object = ralloc();
+			auto value = RALLOC();
+			auto key = RALLOC();
+			auto object = RALLOC();
 
 			jit_addi(j, value, R_FP, jit_allocai(j, sizeof(Value)));
 			jit_addi(j, key, R_FP, jit_allocai(j, sizeof(Value)));
@@ -229,7 +314,7 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_call_method(j, &Stack::pop_into);
 
 #ifndef NDEBUG
-			auto type = ralloc();
+			auto type = RALLOC();
 			jit_ldxi(j, type, object, offsetof(Value, type), sizeof(Value::type));
 
 			auto l = jit_beqi(j, 0, type, VALUE_OBJECT);
@@ -240,10 +325,11 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_putargi(j, 0);
 			jit_call(j, __assert_fail);
 			jit_patch(j, l);
-			rfree(type);
+			
+			RFREE(type);
 #endif
 
-			auto _object = ralloc();
+			auto _object = RALLOC();
 			jit_ldxi(j, _object, object, offsetof(Value, object), sizeof(Value::object));
 
 			jit_prepare(j);
@@ -251,7 +337,12 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_putargr(j, key);			
 			jit_putargr(j, value);
 			auto x = &Hash_Table<Value, Value>::put_by_ptr;
-			jit_call_method(j, x);			
+			jit_call_method(j, x);	
+
+			RFREE(value);
+			RFREE(key);
+			RFREE(object);
+			RFREE(_object);		
 			break;
 		}
 		case AST_OP_DUP: {
@@ -261,26 +352,26 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_prepare(j);
 			jit_putargr(j, R_STACK);
 			jit_call_method(j, &Stack::peek);
-			auto tos = ralloc();
+			auto tos = RALLOC();
 			jit_retval(j, tos);
 
 			jit_prepare(j);
 			jit_putargr(j, R_STACK);
 			jit_putargr(j, tos);
 			jit_call_method(j, &Stack::push);
-			rfree(tos);
+			RFREE(tos);
 			break;
 		}
 		case AST_OP_DROP: {
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_drop");
 #endif
-			auto data = ralloc();
+			auto data = RALLOC();
 			jit_addi(j, data, R_STACK, offsetof(Stack, data));
 			jit_prepare(j);
 			jit_putargr(j, data);
 			jit_call_method(j, &Array<Value>::drop);
-			rfree(data);
+			RFREE(data);
 			break;
 		}
 		case AST_OP_SWAP:
@@ -303,7 +394,7 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_load");
 #endif
-			auto key = ralloc();
+			auto key = RALLOC();
 			jit_addi(j, key, R_FP, jit_allocai(j, sizeof(Value)));
 
 			jit_prepare(j);
@@ -312,7 +403,7 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_call_method(j, &Stack::pop_into);
 
 #ifndef NDEBUG
-			auto type = ralloc();
+			auto type = RALLOC();
 			jit_ldxi(j, type, key, offsetof(Value, type), sizeof(Value::type));
 
 			auto l = jit_beqi(j, 0, type, VALUE_REFERENCE);
@@ -323,35 +414,27 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_putargi(j, 0);
 			jit_call(j, __assert_fail);
 			jit_patch(j, l);
-			rfree(type);
+			RFREE(type);
 #endif
 
-			auto string = ralloc(); // 4
+			auto string = RALLOC();
 			jit_ldxi(j, string, key, offsetof(Value, string), sizeof(Value::string));
 
 			jit_prepare(j);
 			jit_putargr(j, R_SCOPE);
 			jit_putargr(j, string);
 			jit_call_method(j, &Scope::get); // @Volatile
-			auto result = ralloc();
+			auto result = RALLOC();
 			jit_retval(j, result);
-
-			auto l2 = jit_bnei(j, 0, string, 0);
-			auto tmp = ralloc(); // 5
-			jit_movi(j, tmp, 0);
-			jit_stxi(j, offsetof(Value, a), key, tmp, sizeof(Value::a));
-			jit_movi(j, tmp, VALUE_NIL);
-			jit_stxi(j, offsetof(Value, type), key, tmp, sizeof(Value::type));
-			jit_movr(j, result, key);
-			jit_patch(j, l2);
 
 			jit_prepare(j);
 			jit_putargr(j, R_STACK);
 			jit_putargr(j, result);
 			jit_call_method(j, &Stack::push);
-			rfree(key);
-			rfree(string);
-			rfree(result);
+
+			RFREE(key);
+			RFREE(string);
+			RFREE(result);
 			break;
 		}
 		case AST_OP_STORE: {
@@ -359,8 +442,8 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_comment(j, "__rt_store");
 #endif
 
-			auto key = ralloc();
-			auto value = ralloc();
+			auto key = RALLOC();
+			auto value = RALLOC();
 			jit_addi(j, key, R_FP, jit_allocai(j, sizeof(Value)));
 			jit_addi(j, value, R_FP, jit_allocai(j, sizeof(Value)));
 
@@ -375,7 +458,7 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_call_method(j, &Stack::pop_into);			
 
 #ifndef NDEBUG
-			auto type = ralloc();
+			auto type = RALLOC();
 			jit_ldxi(j, type, key, offsetof(Value, type), sizeof(Value::type));
 
 			auto l = jit_beqi(j, 0, type, VALUE_REFERENCE);
@@ -387,10 +470,10 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_call(j, __assert_fail);
 			jit_patch(j, l);
 			
-			rfree(type);
+			RFREE(type);
 #endif	
 
-			auto string = ralloc();
+			auto string = RALLOC();
 			jit_ldxi(j, string, key, offsetof(Value, string), sizeof(Value::string));
 
 			jit_prepare(j);
@@ -399,9 +482,9 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_putargr(j, value);
 			jit_call_method(j, &Scope::set);
 
-			rfree(key);
-			rfree(value);
-			rfree(string);
+			RFREE(key);
+			RFREE(value);
+			RFREE(string);
 			break;
 		}
 		case AST_OP_WHILE:
@@ -418,9 +501,9 @@ void Compiler::compile_constant(jit *j, Node *n) {
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_push_true");
 #endif
-			auto v = ralloc();
+			auto v = RALLOC();
 			jit_addi(j, v, R_FP, jit_allocai(j, sizeof(Value)));
-			auto tmp = ralloc();
+			auto tmp = RALLOC();
 			jit_movi(j, tmp, 0);
 			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
 			jit_movi(j, tmp, VALUE_TRUE);
@@ -431,8 +514,8 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_putargr(j, v);
 			jit_call_method(j, &Stack::push);
 
-			rfree(v);
-			rfree(tmp);
+			RFREE(v);
+			RFREE(tmp);
 			break;
 		}
 		case NODE_FALSE: {
@@ -441,9 +524,9 @@ void Compiler::compile_constant(jit *j, Node *n) {
 #endif
 			auto i = jit_allocai(j, sizeof(Value));
 
-			auto v = ralloc();
+			auto v = RALLOC();
 			jit_addi(j, v, R_FP, i);
-			auto tmp = ralloc();
+			auto tmp = RALLOC();
 			jit_movi(j, tmp, 0);
 			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
 			jit_movi(j, tmp, VALUE_FALSE);
@@ -454,8 +537,8 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_putargr(j, v);
 			jit_call_method(j, &Stack::push);
 
-			rfree(v);
-			rfree(tmp);
+			RFREE(v);
+			RFREE(tmp);
 			break;
 		}
 		case NODE_NIL: {
@@ -464,9 +547,9 @@ void Compiler::compile_constant(jit *j, Node *n) {
 #endif
 			auto i = jit_allocai(j, sizeof(Value));
 
-			auto v = ralloc();
+			auto v = RALLOC();
 			jit_addi(j, v, R_FP, i);
-			auto tmp = ralloc();
+			auto tmp = RALLOC();
 			jit_movi(j, tmp, 0);
 			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
 			jit_movi(j, tmp, VALUE_NIL);
@@ -477,17 +560,17 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_putargr(j, v);
 			jit_call_method(j, &Stack::push);
 
-			rfree(v);
-			rfree(tmp);
+			RFREE(v);
+			RFREE(tmp);
 			break;
 		}
 		case NODE_NUMBER: {
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_push_number");
 #endif
-			auto v = ralloc();
+			auto v = RALLOC();
 			jit_addi(j, v, R_FP, jit_allocai(j, sizeof(Value)));
-			auto tmp = ralloc();
+			auto tmp = RALLOC();
 			jit_movi(j, tmp, 0);
 			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
 			jit_movi(j, tmp, VALUE_NUMBER);
@@ -500,8 +583,8 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_putargr(j, v);
 			jit_call_method(j, &Stack::push);
 
-			rfree(v);
-			rfree(tmp);
+			RFREE(v);
+			RFREE(tmp);
 			break;
 		}
 		case NODE_STRING: {
@@ -516,12 +599,12 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_code_align(j, 32);
 			jit_patch(j, skip);
 
-			auto str = ralloc();
+			auto str = RALLOC();
 			jit_ref_data(j, str, l);
 
-			auto v = ralloc();
+			auto v = RALLOC();
 			jit_addi(j, v, R_FP, jit_allocai(j, sizeof(Value)));
-			auto tmp = ralloc();
+			auto tmp = RALLOC();
 			jit_movi(j, tmp, 0);
 			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
 			jit_movi(j, tmp, VALUE_STRING);
@@ -533,9 +616,9 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_putargr(j, v);
 			jit_call_method(j, &Stack::push);
 			
-			rfree(str);
-			rfree(v);
-			rfree(tmp);
+			RFREE(str);
+			RFREE(v);
+			RFREE(tmp);
 			break;
 		}
 		case NODE_REFERENCE: {
@@ -550,12 +633,12 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_code_align(j, 32);
 			jit_patch(j, skip);
 
-			auto str = ralloc();
+			auto str = RALLOC();
 			jit_ref_data(j, str, l);
 
-			auto v = ralloc();
+			auto v = RALLOC();
 			jit_addi(j, v, R_FP, jit_allocai(j, sizeof(Value)));
-			auto tmp = ralloc();
+			auto tmp = RALLOC();
 			jit_movi(j, tmp, 0);
 			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
 			jit_movi(j, tmp, VALUE_REFERENCE);
@@ -567,9 +650,9 @@ void Compiler::compile_constant(jit *j, Node *n) {
 			jit_putargr(j, v);
 			jit_call_method(j, &Stack::push);
 			
-			rfree(str);
-			rfree(v);
-			rfree(tmp);
+			RFREE(str);
+			RFREE(v);
+			RFREE(tmp);
 			break;
 		}
 		default:

@@ -50,6 +50,7 @@ struct Value {
 	};
 
 	Value() : a(0) {}
+	Value(u8 _type) : a(0), type(_type) {}
 
 	bool is_truthy();
 

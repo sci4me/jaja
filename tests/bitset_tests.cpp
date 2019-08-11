@@ -94,3 +94,20 @@ DEFINE_TEST(bitset_next_clear_works) {
     assert(x.next_clear(7) == 8);
     assert(x.next_clear(22) == 23);
 }
+
+DEFINE_TEST(bitset_bits_set_works) {
+    auto x = Bitset();
+
+    x.set(4);
+    x.set(7);
+    x.set(42);
+    x.set(81);
+
+    for(u32 i = 50; i < 70; i++) x.set(i);
+
+    x.clear(7);
+
+    assert(x.bits_set() == 23);
+}
+
+// TOOD stress test
