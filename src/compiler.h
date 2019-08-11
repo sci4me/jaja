@@ -16,9 +16,11 @@
 
 struct Compiler {
 	Heap *heap;
-	Bitset registers;
 
-	Compiler(Heap *_heap);
+	Bitset *registers;
+	Array<Bitset*> registersStack;
+
+	Compiler(Heap *_heap) : heap(_heap), registers(0) {};
 
 	jit_value ralloc();
 	void rfree(jit_value r);

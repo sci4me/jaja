@@ -24,13 +24,14 @@ struct Hash_Table {
     u64 (*hash_fn)(K key);
     bool (*eq_fn)(K a, K b);
 
-    u32 size;
+    u32 size; // TODO assert size is a power of 2 always
     u32 count;
     K *keys;
     V *values;
     u8 *state;
 
     void ensure_capacity() {
+        // TODO: size - 2? we ought to use load factor here?
         if(count >= size - 2) {
             u32 old_size = size;
             size *= 2;
@@ -76,6 +77,10 @@ struct Hash_Table {
         FREE(allocator, keys);
         FREE(allocator, values);
         FREE(allocator, state);
+    }
+
+    void put_by_ptr(K *key, V *value) {
+        put(*key, *value);
     }
 
     void put(K key, V value) {

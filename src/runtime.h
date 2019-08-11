@@ -45,7 +45,7 @@ struct Value {
 	union {
 		s64 number;
 		char *string;
-		Hash_Table<Value, Value>* object;
+		Hash_Table<Value, Value> *object;
 		Lambda lambda;
 	};
 

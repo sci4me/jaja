@@ -397,15 +397,6 @@ void __rt_set_prop(Stack *stack) {
 	object.object->put(key, value);
 }
 
-void __rt_store(Heap *heap, Scope *scope, Stack *stack) {
-	auto key = stack->pop();
-	auto value = stack->pop();
-
-	assert(key.type == VALUE_REFERENCE);
-
-	scope->set(key.string, &value);
-}
-
 void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
 	auto body = stack->pop();
 	auto cond = stack->pop();

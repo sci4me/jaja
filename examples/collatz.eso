@@ -25,8 +25,8 @@ and instead of compiling a lambda for the if body, just compile the code in dire
 
 	node;cb;!
 
-	node;"left".nil=~[node;$"left".cb;visit;!node:]?
-	node;"right".nil=~[node;$"right".cb;visit;!node:]?
+	{node;"left".nil=~[node;$"left".cb;visit;!node:]?
+	node;"right".nil=~[node;$"right".cb;visit;!node:]?}
 ]visit:
 
 \d: d; "value" 4 , 
@@ -40,11 +40,19 @@ and instead of compiling a lambda for the if body, just compile the code in dire
 \a: a; "value" 1 , a;"left"b;, a;"right"c;,
 
 a; [
+
+] visit;!
+}
+
+{
+a; [
 	n:
 	n;"left".nil=~[n;"left". "parent" n; , n;]?
 	n;"right".nil=~[n;"right". "parent" n; , n;]?
 ] visit;!
+}
 
+{
 a; [
 	"value: "print;!
 	$"value".println;!

@@ -1,14 +1,8 @@
 #include "compiler.h"
 
-Compiler::Compiler(Heap *_heap) : heap(_heap) {
-	registers.set(0);
-	registers.set(1);
-	registers.set(2);
-}
-
 jit_value Compiler::ralloc() {
-	u64 n = registers.next_clear();
-	registers.set(n);
+	u64 n = registers->next_clear();
+	registers->set(n);
 	return R(n);
 }
 
@@ -17,8 +11,8 @@ void Compiler::rfree(jit_value r) {
 	memcpy(&x, &r, sizeof(jit_reg));
 	auto n = (u64) x.id;
 
-	assert(registers.get(n));
-	registers.clear(n);
+	assert(registers->get(n));
+	registers->clear(n);
 }
 
 Value Compiler::compile(Array<Node*>* ast) {
@@ -29,6 +23,13 @@ Value Compiler::compile(Array<Node*>* ast) {
 }
 
 Lambda Compiler::compile_raw(Array<Node*>* ast) {	
+	registersStack.push(registers);
+	registers = new Bitset();
+
+	registers->set(0);
+	registers->set(1);
+	registers->set(2);
+
 	Lambda result;
 
 	auto j = jit_init();	
@@ -38,7 +39,8 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 	jit_comment(j, ">>>");
 #endif
 
-	jit_enable_optimization(j, JIT_OPT_ALL);
+	jit_disable_optimization(j, JIT_OPT_ALL);
+	
 	jit_prolog(j, &result.fn);
 	jit_declare_arg(j, JIT_PTR, sizeof(Heap*));
 	jit_declare_arg(j, JIT_PTR, sizeof(Scope*));
@@ -82,6 +84,9 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 	jit_dump_ops(j, JIT_DEBUG_OPS);
 	printf("}\n");
 #endif
+
+	delete registers;
+	registers = registersStack.pop();
 
 	return result;
 }
@@ -195,9 +200,60 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 		case AST_OP_GET_PROP:
 			JIT_RT_CALL_2(__rt_get_prop);
 			break;
-		case AST_OP_SET_PROP:
-			JIT_RT_CALL_2(__rt_set_prop);
+		case AST_OP_SET_PROP: {
+#ifdef JIT_DEBUG
+			jit_comment(j, "__rt_set_prop");
+#endif
+
+			auto value = ralloc();
+			auto key = ralloc();
+			auto object = ralloc();
+
+			jit_addi(j, value, R_FP, jit_allocai(j, sizeof(Value)));
+			jit_addi(j, key, R_FP, jit_allocai(j, sizeof(Value)));
+			jit_addi(j, object, R_FP, jit_allocai(j, sizeof(Value)));
+
+			jit_prepare(j);
+			jit_putargr(j, R_STACK);
+			jit_putargr(j, value);
+			jit_call_method(j, &Stack::pop_into);
+
+			jit_prepare(j);
+			jit_putargr(j, R_STACK);
+			jit_putargr(j, key);
+			jit_call_method(j, &Stack::pop_into);
+			
+			jit_prepare(j);
+			jit_putargr(j, R_STACK);
+			jit_putargr(j, object);
+			jit_call_method(j, &Stack::pop_into);
+
+#ifndef NDEBUG
+			auto type = ralloc();
+			jit_ldxi(j, type, object, offsetof(Value, type), sizeof(Value::type));
+
+			auto l = jit_beqi(j, 0, type, VALUE_OBJECT);
+			jit_prepare(j);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_putargi(j, 0);
+			jit_call(j, __assert_fail);
+			jit_patch(j, l);
+			rfree(type);
+#endif
+
+			auto _object = ralloc();
+			jit_ldxi(j, _object, object, offsetof(Value, object), sizeof(Value::object));
+
+			jit_prepare(j);
+			jit_putargr(j, _object);
+			jit_putargr(j, key);			
+			jit_putargr(j, value);
+			auto x = &Hash_Table<Value, Value>::put_by_ptr;
+			jit_call_method(j, x);			
 			break;
+		}
 		case AST_OP_DUP: {
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_dup");
@@ -247,7 +303,7 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_load");
 #endif
-			auto key = ralloc(); // 3
+			auto key = ralloc();
 			jit_addi(j, key, R_FP, jit_allocai(j, sizeof(Value)));
 
 			jit_prepare(j);
@@ -299,7 +355,6 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			break;
 		}
 		case AST_OP_STORE: {
-			// JIT_RT_CALL_012(__rt_store);
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_store");
 #endif
