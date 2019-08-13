@@ -5,11 +5,6 @@ we can detect if statements as a lambda followed by the if instruction (?),
 and instead of compiling a lambda for the if body, just compile the code in directly
 }
 
-false ~ println ; !
-true ~ println ; !
-
-{[] test :}
-
 {
 [$2%0=$[^2/^]?~[3*1+]?]collatz:
 [n:0s:[n;1=~][n;collatz;!n:s;1+s:]#s;]steps:
@@ -25,15 +20,17 @@ true ~ println ; !
 ]#
 }
 
-{
 [
+	"test" println;!
+	{
 	cb:
 	node:
 
 	node;cb;!
 
-	{node;"left".nil=~[node;$"left".cb;visit;!node:]?
-	node;"right".nil=~[node;$"right".cb;visit;!node:]?}
+	node;"left".nil=~[node;$"left".cb;visit;!node:]?
+	node;"right".nil=~[node;$"right".cb;visit;!node:]?
+	}
 ]visit:
 
 \d: d; "value" 4 , 
@@ -46,16 +43,16 @@ true ~ println ; !
 
 \a: a; "value" 1 , a;"left"b;, a;"right"c;,
 
-a; [
-
-] visit;!
-}
+[ println;! ] test :
+a; test; !
 
 {
 a; [
+	{
 	n:
 	n;"left".nil=~[n;"left". "parent" n; , n;]?
 	n;"right".nil=~[n;"right". "parent" n; , n;]?
+	}
 ] visit;!
 }
 

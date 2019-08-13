@@ -93,18 +93,27 @@ void Stack::rot() {
 	data.data[data.count - 3] = y;
 }
 
-void Scope::set(char *key, Value *value) {
-	auto old = get(key);
+static void __scope_set(Hash_Table<char*, Value> *ht, char *key, Value *value, Heap *heap) {
+	auto old = ht->get_ptr(key);
 	if(old && old->a) heap->unmark_root(old->a);
 	if(value->a) heap->mark_root(value->a);
+	ht->put(key, *value);
+}
+
+void Scope::set(char *key, Value *value) {
+	// auto old = get(key);
+	// if(old && old->a) heap->unmark_root(old->a);
+	// if(value->a) heap->mark_root(value->a);
 
 	for(Scope *curr = this; curr; curr = curr->parent) {
 		if(curr->contains(key)) {
-			curr->values.put(key, *value);
+			// curr->values.put(key, *value);
+			__scope_set(&curr->values, key, value, heap);
 			return;
 		}
 	}
-	values.put(key, *value);
+	// values.put(key, *value);
+	__scope_set(&values, key, value, heap);
 }
 
 Value* Scope::get(char *key) {
@@ -125,6 +134,8 @@ bool Scope::contains(char *key) {
 }
 
 void Scope::pop(Heap *heap) {
+	if(values.count == 0) return;
+	
 	for(u32 i = 0; i < values.size; i++) {
 		if(values.state[i] == HT_STATE_OCCUPIED) {
 			auto v = values.values[i];
@@ -383,9 +394,7 @@ void __rt_get_prop(Stack *stack) {
 		auto x = object.object->get(key);
 		stack->push(&x);
 	} else {
-		Value v;
-		v.type = VALUE_NIL;
-		stack->push(&v);
+		stack->push(&NIL);
 	}
 }
 
@@ -397,6 +406,23 @@ void __rt_set_prop(Stack *stack) {
 	assert(object.type == VALUE_OBJECT);
 
 	object.object->put(key, value);
+}
+
+void __rt_store(Stack *stack, Scope *scope) {
+	auto key = stack->pop();
+	auto value = stack->pop();
+
+	assert(key.type == VALUE_REFERENCE);
+
+	scope->set(key.string, &value);
+}
+
+void __rt_load(Stack *stack, Scope *scope) {
+	auto key = stack->pop();
+
+	assert(key.type == VALUE_REFERENCE);
+
+	stack->push(scope->get(key.string));
 }
 
 void __rt_while(Heap *heap, Scope *scope, Stack *stack) {

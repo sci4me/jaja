@@ -31,8 +31,16 @@ struct Hash_Table {
     u8 *state;
 
     void ensure_capacity() {
-        // TODO: size - 2? we ought to use load factor here?
-        if(count >= size - 2) {
+        if(keys == 0) {
+            keys = (K*) ALLOC(allocator, size * sizeof(K));
+            values = (V*) ALLOC(allocator, size * sizeof(V));
+            state = (u8*) ALLOC(allocator, size * sizeof(u8));
+        
+            memset(keys, 0, size * sizeof(K)); 
+            memset(values, 0, size * sizeof(V)); 
+            memset(state, 0, size * sizeof(u8)); 
+        } else if(count >= size - 2) {
+            // TODO: size - 2? we ought to use load factor here?
             u32 old_size = size;
             size *= 2;
 
@@ -59,24 +67,20 @@ struct Hash_Table {
         }
     }
 
-    Hash_Table(u64 (*_hash_fn)(K data), bool (*_eq_fn)(K a, K b) = default_eq_fn, u32 _size = 16, Allocator _allocator = cstdlib_allocator) : allocator(_allocator), hash_fn(_hash_fn), eq_fn(_eq_fn), size(_size) {
-        assert(size > 0);
-
-        count = 0;
-
-        keys = (K*) ALLOC(allocator, size * sizeof(K));
-        values = (V*) ALLOC(allocator, size * sizeof(V));
-        state = (u8*) ALLOC(allocator, size * sizeof(u8));
-        
-        memset(keys, 0, size * sizeof(K)); 
-        memset(values, 0, size * sizeof(V)); 
-        memset(state, 0, size * sizeof(u8)); 
+    Hash_Table(u64 (*_hash_fn)(K data), bool (*_eq_fn)(K a, K b) = default_eq_fn, u32 _size = 16, Allocator _allocator = cstdlib_allocator) : 
+        allocator(_allocator), hash_fn(_hash_fn), eq_fn(_eq_fn), size(_size), count(0), keys(0), values(0), state(0) {
     }
 
     ~Hash_Table() {
-        FREE(allocator, keys);
-        FREE(allocator, values);
-        FREE(allocator, state);
+        if(keys) {
+            FREE(allocator, keys);
+            FREE(allocator, values);
+            FREE(allocator, state);
+
+            keys = 0;
+            values = 0;
+            state = 0;
+        }
     }
 
     void put_by_ptr(K *key, V *value) {
@@ -124,6 +128,8 @@ _return_zero:
     }
 
     V* get_ptr(K key) {
+        if(!keys) return 0;
+
         u64 index = hash_fn(key) % size;
         for(;;) {
             index &= (size - 1);
@@ -140,6 +146,8 @@ _return_zero:
     }
 
     bool contains_key(K key) {
+        if(!keys) return false;
+
         u64 index = hash_fn(key) % size;
         for(;;) {
             index &= (size - 1);
@@ -155,6 +163,8 @@ _return_zero:
     }
 
     bool remove(K key) {
+        if(!keys) return false;
+
         u64 index = hash_fn(key) % size;
         for(;;) {
             index &= (size - 1);

@@ -220,7 +220,6 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			JIT_RT_CALL_2(__rt_or);
 			break;
 		case AST_OP_NOT: {
-			// JIT_RT_CALL_2(__rt_not);
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_not");
 #endif
@@ -286,6 +285,8 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			JIT_RT_CALL_2(__rt_get_prop);
 			break;
 		case AST_OP_SET_PROP: {
+			JIT_RT_CALL_2(__rt_set_prop);
+			/*
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_set_prop");
 #endif
@@ -342,7 +343,8 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			RFREE(value);
 			RFREE(key);
 			RFREE(object);
-			RFREE(_object);		
+			RFREE(_object);
+			*/		
 			break;
 		}
 		case AST_OP_DUP: {
@@ -391,6 +393,8 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			jit_call_method(j, &Stack::rot);
 			break;
 		case AST_OP_LOAD: {
+			JIT_RT_CALL_21(__rt_load);
+			/*
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_load");
 #endif
@@ -435,9 +439,12 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			RFREE(key);
 			RFREE(string);
 			RFREE(result);
+			*/
 			break;
 		}
 		case AST_OP_STORE: {
+			JIT_RT_CALL_21(__rt_store);
+			/*
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_store");
 #endif
@@ -485,6 +492,7 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			RFREE(key);
 			RFREE(value);
 			RFREE(string);
+			*/
 			break;
 		}
 		case AST_OP_WHILE:
