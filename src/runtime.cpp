@@ -93,27 +93,14 @@ void Stack::rot() {
 	data.data[data.count - 3] = y;
 }
 
-static void __scope_set(Hash_Table<char*, Value> *ht, char *key, Value *value, Heap *heap) {
-	auto old = ht->get_ptr(key);
-	if(old && old->a) heap->unmark_root(old->a);
-	if(value->a) heap->mark_root(value->a);
-	ht->put(key, *value);
-}
-
 void Scope::set(char *key, Value *value) {
-	// auto old = get(key);
-	// if(old && old->a) heap->unmark_root(old->a);
-	// if(value->a) heap->mark_root(value->a);
-
 	for(Scope *curr = this; curr; curr = curr->parent) {
 		if(curr->contains(key)) {
-			// curr->values.put(key, *value);
-			__scope_set(&curr->values, key, value, heap);
+			curr->values.put(key, *value);
 			return;
 		}
 	}
-	// values.put(key, *value);
-	__scope_set(&values, key, value, heap);
+	values.put(key, *value);
 }
 
 Value* Scope::get(char *key) {
@@ -408,11 +395,15 @@ void __rt_set_prop(Stack *stack) {
 	object.object->put(key, value);
 }
 
-void __rt_store(Stack *stack, Scope *scope) {
+void __rt_store(Heap *heap, Scope *scope, Stack *stack) {
 	auto key = stack->pop();
 	auto value = stack->pop();
 
 	assert(key.type == VALUE_REFERENCE);
+
+	auto old = scope->get(key.string);
+	if(old && old->a) heap->unmark_root(old->a);
+	if(value.a) heap->mark_root(value.a);
 
 	scope->set(key.string, &value);
 }

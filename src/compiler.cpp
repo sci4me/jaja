@@ -443,7 +443,7 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			break;
 		}
 		case AST_OP_STORE: {
-			JIT_RT_CALL_21(__rt_store);
+			JIT_RT_CALL_012(__rt_store);
 			/*
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_store");

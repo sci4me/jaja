@@ -5,7 +5,6 @@ we can detect if statements as a lambda followed by the if instruction (?),
 and instead of compiling a lambda for the if body, just compile the code in directly
 }
 
-{
 [$2%0=$[^2/^]?~[3*1+]?]collatz:
 [n:0s:[n;1=~][n;collatz;!n:s;1+s:]#s;]steps:
 
@@ -18,11 +17,9 @@ and instead of compiling a lambda for the if body, just compile the code in dire
 
     1+
 ]#
-}
 
+{
 [
-	"test" println;!
-	{
 	cb:
 	node:
 
@@ -30,10 +27,10 @@ and instead of compiling a lambda for the if body, just compile the code in dire
 
 	node;"left".nil=~[node;$"left".cb;visit;!node:]?
 	node;"right".nil=~[node;$"right".cb;visit;!node:]?
-	}
 ]visit:
+}
 
-\d: d; "value" 4 , 
+{
 \e: e; "value" 5 , 
 \f: f; "value" 6 , 
 \g: g; "value" 7 , 
@@ -43,20 +40,12 @@ and instead of compiling a lambda for the if body, just compile the code in dire
 
 \a: a; "value" 1 , a;"left"b;, a;"right"c;,
 
-[ println;! ] test :
-a; test; !
-
-{
 a; [
-	{
 	n:
 	n;"left".nil=~[n;"left". "parent" n; , n;]?
 	n;"right".nil=~[n;"right". "parent" n; , n;]?
-	}
 ] visit;!
-}
 
-{
 a; [
 	"value: "print;!
 	$"value".println;!

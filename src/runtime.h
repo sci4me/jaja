@@ -144,7 +144,7 @@ void __rt_get_prop(Stack *stack);
 void __rt_set_prop(Stack *stack);
 
 void __rt_load(Stack *stack, Scope *scope);
-void __rt_store(Stack *stack, Scope *scope);
+void __rt_store(Heap *heap, Scope *scope, Stack *stack);
 
 void __rt_while(Heap *heap, Scope *scope, Stack *stack);
 
