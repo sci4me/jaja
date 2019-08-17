@@ -16,6 +16,7 @@
 static void free_allocation(Allocator allocator, Allocation *a) {
 	switch(a->value.type) {
 		case VALUE_OBJECT:
+			a->value.object->free();
 			FREE(allocator, a->value.object);
 			break;
 		case VALUE_LAMBDA:

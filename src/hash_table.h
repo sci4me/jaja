@@ -30,15 +30,35 @@ struct Hash_Table {
     V *values;
     u8 *state;
 
+    void alloc() {
+        assert(!keys);
+        assert(!values);
+        assert(!state);
+
+        keys = (K*) ALLOC(allocator, size * sizeof(K));
+        values = (V*) ALLOC(allocator, size * sizeof(V));
+        state = (u8*) ALLOC(allocator, size * sizeof(u8));
+    
+        memset(keys, 0, size * sizeof(K)); 
+        memset(values, 0, size * sizeof(V)); 
+        memset(state, 0, size * sizeof(u8)); 
+    }
+    
+    void free() {
+        if(keys) {
+            assert(keys);
+            assert(values);
+            assert(state);
+
+            FREE(allocator, keys);
+            FREE(allocator, values);
+            FREE(allocator, state);
+        }
+    }
+
     void ensure_capacity() {
         if(keys == 0) {
-            keys = (K*) ALLOC(allocator, size * sizeof(K));
-            values = (V*) ALLOC(allocator, size * sizeof(V));
-            state = (u8*) ALLOC(allocator, size * sizeof(u8));
-        
-            memset(keys, 0, size * sizeof(K)); 
-            memset(values, 0, size * sizeof(V)); 
-            memset(state, 0, size * sizeof(u8)); 
+            alloc();
         } else if(count >= size - 2) {
             // TODO: size - 2? we ought to use load factor here?
             u32 old_size = size;
@@ -72,15 +92,7 @@ struct Hash_Table {
     }
 
     ~Hash_Table() {
-        if(keys) {
-            FREE(allocator, keys);
-            FREE(allocator, values);
-            FREE(allocator, state);
-
-            keys = 0;
-            values = 0;
-            state = 0;
-        }
+        free();
     }
 
     void put_by_ptr(K *key, V *value) {

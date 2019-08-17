@@ -8,6 +8,7 @@
 
 // #define JIT_DEBUG
 // #define JIT_RALLOC_TRACKING
+// #define JIT_MAX_RALLOC_TRACKING
 
 #ifdef JIT_RALLOC_TRACKING
 	struct RAllocation {
@@ -32,10 +33,13 @@
 struct Compiler {
 	Heap *heap;
 
-	// TODO: track who allocated what where for reporting when assert(registers->bits_set() == 0) fails
 #ifdef JIT_RALLOC_TRACKING
 	Hash_Table<u64, RAllocation> *allocations;
 	Array<Hash_Table<u64, RAllocation>*> allocationsStack;
+#endif
+#ifdef JIT_MAX_RALLOC_TRACKING
+	u32 max_rallocs;
+	Array<u32> max_rallocs_stack;
 #endif
 	Bitset *registers;
 	Array<Bitset*> registersStack;

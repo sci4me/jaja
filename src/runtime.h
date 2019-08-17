@@ -8,6 +8,8 @@ extern "C" {
 #include "hash_table.h"
 #include "array.h"
 
+// #define HEAP_DEBUG
+
 #define VALUE_TRUE 			0x00
 #define VALUE_FALSE			0x01
 #define VALUE_NIL 			0x02
@@ -17,8 +19,6 @@ extern "C" {
 #define VALUE_OBJECT 		0x06
 #define VALUE_LAMBDA 		0x07
 #define VALUE_NATIVE 		0x08
-
-#define HEAP_DEBUG
 
 #ifdef HEAP_DEBUG
 	#define GC_ALLOC(h) h->alloc(__LINE__, __func__, __FILE__)

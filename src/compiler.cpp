@@ -1,5 +1,16 @@
 #include "compiler.h"
 
+/*
+
+It seems to be the case that changing the JIT to generate code that does more of the work itself rather than calling out to a runtime function
+is causing the JIT to run MUCH more slowly, possibly exponentially more slowly. Why? We _REALLY_ need to figure this out. Even if we do end up
+having an interpreter as a first stage for run-once code, before the JIT, uh.... yeahhhh.... uh...
+We can't take hundreds of millis to compile a damn function. So. What's going on? Either I'm doing something dumb or myjit sucks or like...
+Idk. #FigureItOut @FutureSelf
+					- sci4me, Aug 17 2019
+
+*/
+
 #ifdef JIT_RALLOC_TRACKING
 jit_value Compiler::ralloc(const char *func, const char *file, u32 line) {
 #else
@@ -13,6 +24,11 @@ jit_value Compiler::ralloc() {
 		.file = file,
 		.line = line
 	});
+#endif
+#ifdef JIT_MAX_RALLOC_TRACKING
+	if(n > max_rallocs) {
+		max_rallocs = n;
+	}
 #endif
 	return R(n);
 }
@@ -46,6 +62,10 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 	allocationsStack.push(allocations);
 	allocations = new Hash_Table<u64, RAllocation>(hash_u64);
 #endif
+#ifdef JIT_MAX_RALLOC_TRACKING
+	max_rallocs_stack.push(max_rallocs);
+	max_rallocs = 0;
+#endif
 
 	registers->set(0);
 	registers->set(1);
@@ -60,7 +80,7 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 	jit_comment(j, ">>>");
 #endif
 
-	jit_disable_optimization(j, JIT_OPT_ALL);
+	jit_enable_optimization(j, JIT_OPT_ALL);
 	
 	jit_prolog(j, &result.fn);
 	jit_declare_arg(j, JIT_PTR, sizeof(Heap*));
@@ -111,8 +131,7 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 	registers->clear(2);
 
 #ifdef JIT_RALLOC_TRACKING
-	auto n = registers->bits_set() ;
-	if(n) {
+	if(registers->bits_set()) {
 		for(u32 i = 0; i < allocations->size; i++) {
 			if(allocations->state[i] == HT_STATE_OCCUPIED) {
 				auto a = allocations->values[i];
@@ -122,6 +141,10 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 		fflush(stdout);
 		assert(false);
 	}
+#endif
+#ifdef JIT_MAX_RALLOC_TRACKING
+	printf("max_rallocs: %u\n", max_rallocs);
+	max_rallocs = max_rallocs_stack.pop();
 #endif
 
 	delete registers;
@@ -142,7 +165,7 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 	jit_comment(j, "__rt_push_lambda");
 #endif
 
-	auto lambda = RALLOC();
+	auto lambda = RALLOC(); auto LINE = __LINE__;
 
 #ifdef HEAP_DEBUG
 	auto rz = RALLOC();
@@ -150,9 +173,9 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 	jit_movi(j, rz, 0);
 	jit_prepare(j);
 	jit_putargr(j, R_HEAP);
-	jit_putargr(j, rz); // TODO put real shit here?
-	jit_putargr(j, rz);
-	jit_putargr(j, rz);
+	jit_putargi(j, LINE);
+	jit_putargi(j, __func__);
+	jit_putargi(j, __FILE__);
 	jit_call_method(j, &Heap::alloc);
 	jit_retval(j, lambda);
 
@@ -603,7 +626,6 @@ void Compiler::compile_constant(jit *j, Node *n) {
 
 			jit_label *l = jit_get_label(j);
 			jit_data_str(j, n->string);
-
 			jit_code_align(j, 32);
 			jit_patch(j, skip);
 
@@ -637,7 +659,6 @@ void Compiler::compile_constant(jit *j, Node *n) {
 
 			jit_label *l = jit_get_label(j);
 			jit_data_str(j, n->string);
-
 			jit_code_align(j, 32);
 			jit_patch(j, skip);
 
