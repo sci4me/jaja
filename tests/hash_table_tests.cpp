@@ -1,3 +1,6 @@
+#include <alloca.h>
+#include <stdio.h>
+
 #include "test.h"
 #include "../src/hash.h"
 #include "../src/hash_table.h"
@@ -89,5 +92,24 @@ DEFINE_TEST(hash_table_stress_test) {
     for(u32 i = 0; i < n; i++) {
         assert(x.contains_key(i * 2));
         assert(x.get(i * 2) == i * 3);
+    }
+}
+
+DEFINE_TEST(hash_table_string_stress_test) {
+    auto x = Hash_Table<char*, u32>(hash_string);
+
+    const u32 N = 1000;
+
+    for(u32 i = 0; i < N; i++) {
+        char *buf = (char*) alloca(4 + 3 + 1);
+        sprintf(buf, "test%u", i + 1);
+        x.put(buf, i);
+    }
+
+    for(u32 i = 0; i < N; i++) {
+        char *buf = (char*) alloca(4 + 3 + 1);
+        sprintf(buf, "test%u", i);
+        printf("%u\n", x.contains_key(buf));
+        assert(x.get(buf) == i + 1);
     }
 }

@@ -2,7 +2,6 @@
 #define HASH_TABLE_H
 
 #include <assert.h>
-#include <stdio.h>
 
 #include "types.h"
 #include "hash.h"
@@ -162,15 +161,12 @@ public:
                     return values[index];
                 }
             } else if(hashes[index] == HT_HASH_EMPTY) {
-                goto _return_zero;
+                V x;
+                memset(&x, 0, sizeof(V));
+                return x;
             }
             index++;
         }
-
-_return_zero:
-        V x;
-        memset(&x, 0, sizeof(V));
-        return x;
     }
 
     V* get_ptr(K key) {
@@ -186,13 +182,10 @@ _return_zero:
                     return &values[index];
                 }
             } else if(hashes[index] == HT_HASH_EMPTY) {
-                goto _return_zero;
+                return NULL;
             }
             index++;
         }
-
-_return_zero:
-        return 0;
     }
 
     bool contains_key(K key) {
