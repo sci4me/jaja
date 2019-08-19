@@ -10,10 +10,24 @@ DEFINE_TEST(hash_table_put_works) {
     assert(x.count == 1);
 
     u32 i = 0;
-    while(x.state[i] != HT_STATE_OCCUPIED) i++;
+    while(x.hashes[i] < 2) i++;
 
     assert(x.keys[i] == 1);
     assert(x.values[i] == 42);
+}
+
+DEFINE_TEST(hash_table_put_if_containS_works) {
+    auto x = Hash_Table<u64, u64>(hash_u64);
+
+    x.put(5, 2);
+
+    u64 v = 7;
+
+    assert(x.put_if_contains(5, &v));
+    assert(!x.put_if_contains(6, &v));
+
+    assert(x.get(5) == 7);
+    assert(!x.contains_key(6));   
 }
 
 DEFINE_TEST(hash_table_get_works) {

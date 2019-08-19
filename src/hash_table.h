@@ -8,9 +8,9 @@
 #include "hash.h"
 #include "allocator.h"
 
-#define HT_STATE_EMPTY 0
-#define HT_STATE_OCCUPIED 1
-#define HT_STATE_REMOVED 2
+#define HT_HASH_EMPTY 0
+#define HT_HASH_REMOVED 1
+#define HT_FIRST_VALID_HASH 2
 
 template <typename K>
 bool default_eq_fn(K a, K b) {
@@ -28,32 +28,21 @@ struct Hash_Table {
     u32 count;
     K *keys;
     V *values;
-    u8 *state;
+    u64 *hashes;
 
+private:
     void alloc() {
         assert(!keys);
         assert(!values);
-        assert(!state);
+        assert(!hashes);
 
         keys = (K*) ALLOC(allocator, size * sizeof(K));
         values = (V*) ALLOC(allocator, size * sizeof(V));
-        state = (u8*) ALLOC(allocator, size * sizeof(u8));
+        hashes = (u64*) ALLOC(allocator, size * sizeof(u64));
     
         memset(keys, 0, size * sizeof(K)); 
         memset(values, 0, size * sizeof(V)); 
-        memset(state, 0, size * sizeof(u8)); 
-    }
-    
-    void free() {
-        if(keys) {
-            assert(keys);
-            assert(values);
-            assert(state);
-
-            FREE(allocator, keys);
-            FREE(allocator, values);
-            FREE(allocator, state);
-        }
+        memset(hashes, 0, size * sizeof(u8)); 
     }
 
     void ensure_capacity() {
@@ -66,33 +55,52 @@ struct Hash_Table {
 
             auto old_keys = keys;
             auto old_values = values;
-            auto old_state = state;
+            auto old_hashes = hashes;
 
             keys = (K*) ALLOC(allocator, size * sizeof(K));
             values = (V*) ALLOC(allocator, size * sizeof(V));
-            state = (u8*) ALLOC(allocator, size * sizeof(u8));
+            hashes = (u64*) ALLOC(allocator, size * sizeof(u64));
 
             memset(keys, 0, size * sizeof(K)); 
             memset(values, 0, size * sizeof(V)); 
-            memset(state, 0, size * sizeof(u8)); 
+            memset(hashes, 0, size * sizeof(u64)); 
 
             count = 0;
             for(u32 i = 0; i < old_size; i++) {
-                if(old_state[i]) put(old_keys[i], old_values[i]);
+                if(old_hashes[i] > 1) put(old_keys[i], old_values[i]);
             }
 
             FREE(allocator, old_keys);
             FREE(allocator, old_values);
-            FREE(allocator, old_state);
+            FREE(allocator, old_hashes);
         }
     }
 
+    u64 get_hash(K key) {
+        u64 hash = (*hash_fn)(key);
+        if(hash < HT_FIRST_VALID_HASH) hash += 2;
+        return hash;
+    }
+
+public:
     Hash_Table(u64 (*_hash_fn)(K data), bool (*_eq_fn)(K a, K b) = default_eq_fn, u32 _size = 16, Allocator _allocator = cstdlib_allocator) : 
-        allocator(_allocator), hash_fn(_hash_fn), eq_fn(_eq_fn), size(_size), count(0), keys(0), values(0), state(0) {
+        allocator(_allocator), hash_fn(_hash_fn), eq_fn(_eq_fn), size(_size), count(0), keys(0), values(0), hashes(0) {
     }
 
     ~Hash_Table() {
         free();
+    }
+
+    void free() {
+        if(keys) {
+            assert(keys);
+            assert(values);
+            assert(hashes);
+
+            FREE(allocator, keys);
+            FREE(allocator, values);
+            FREE(allocator, hashes);
+        }
     }
 
     void put_by_ptr(K *key, V *value) {
@@ -102,18 +110,20 @@ struct Hash_Table {
     void put(K key, V value) {
         ensure_capacity();
 
-        u64 index = hash_fn(key) % size;
+        u64 hash = get_hash(key);
+        u64 index = hash % size;
+
         for(;;) {
             index &= (size - 1);
-            if(state[index] == HT_STATE_OCCUPIED) {
+            if(hashes[index] == hash) {
                 if(eq_fn(keys[index], key)) {
                     values[index] = value;
                     break;
                 }
-            } else{
+            } else if(hashes[index] < HT_FIRST_VALID_HASH) {
                 keys[index] = key;
                 values[index] = value;
-                state[index] = HT_STATE_OCCUPIED;
+                hashes[index] = hash;
                 count++;
                 break;
             }
@@ -121,13 +131,37 @@ struct Hash_Table {
         }
     }
 
-    V get(K key) {
-        u64 index = hash_fn(key) % size;
+    bool put_if_contains(K key, V *value) {
+        ensure_capacity();
+
+        u64 hash = get_hash(key);
+        u64 index = hash % size;
+
         for(;;) {
             index &= (size - 1);
-            if(state[index] == HT_STATE_OCCUPIED && eq_fn(keys[index], key)) {
-                return values[index];
-            } else if(state[index] == HT_STATE_EMPTY) {
+            if(hashes[index] == hash) {
+                if(eq_fn(keys[index], key)) {
+                    values[index] = *value;
+                    return true;
+                }
+            } else if(hashes[index] < HT_FIRST_VALID_HASH) {
+                return false;
+            }
+            index++;
+        }
+    }
+
+    V get(K key) {
+        u64 hash = get_hash(key);
+        u64 index = hash % size;
+
+        for(;;) {
+            index &= (size - 1);
+            if(hashes[index] == hash) {
+                if(eq_fn(keys[index], key)) {
+                    return values[index];
+                }
+            } else if(hashes[index] == HT_HASH_EMPTY) {
                 goto _return_zero;
             }
             index++;
@@ -142,12 +176,16 @@ _return_zero:
     V* get_ptr(K key) {
         if(!keys) return 0;
 
-        u64 index = hash_fn(key) % size;
+        u64 hash = get_hash(key);
+        u64 index = hash % size;
+
         for(;;) {
             index &= (size - 1);
-            if(state[index] == HT_STATE_OCCUPIED && eq_fn(keys[index], key)) {
-                return &values[index];
-            } else if(state[index] == HT_STATE_EMPTY) {
+            if(hashes[index] == hash) {
+                if(eq_fn(keys[index], key)) {
+                    return &values[index];
+                }
+            } else if(hashes[index] == HT_HASH_EMPTY) {
                 goto _return_zero;
             }
             index++;
@@ -160,12 +198,16 @@ _return_zero:
     bool contains_key(K key) {
         if(!keys) return false;
 
-        u64 index = hash_fn(key) % size;
+        u64 hash = get_hash(key);
+        u64 index = hash % size;
+
         for(;;) {
             index &= (size - 1);
-            if(state[index] == HT_STATE_OCCUPIED && eq_fn(keys[index], key)) {
-                return true;
-            } else if(state[index] == HT_STATE_EMPTY) {
+            if(hashes[index] == hash) {
+                if(eq_fn(keys[index], key)) {
+                    return true;
+                }
+            } else if(hashes[index] == HT_HASH_EMPTY) {
                 return false;
             }
             index++;
@@ -177,14 +219,18 @@ _return_zero:
     bool remove(K key) {
         if(!keys) return false;
 
-        u64 index = hash_fn(key) % size;
+        u64 hash = get_hash(key);
+        u64 index = hash % size;
+
         for(;;) {
             index &= (size - 1);
-            if(state[index] == HT_STATE_OCCUPIED && eq_fn(keys[index], key)) {
-                state[index] = HT_STATE_REMOVED;
-                count--;
-                return true;
-            } else if(state[index] == HT_STATE_EMPTY) {
+            if(hashes[index] == hash) {
+                if(eq_fn(keys[index], key)) {
+                    hashes[index] = HT_HASH_REMOVED;
+                    count--;
+                    return true;
+                }
+            } else if(hashes[index] == HT_HASH_EMPTY) {
                 return false;
             }
             index++;

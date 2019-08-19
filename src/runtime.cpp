@@ -96,8 +96,7 @@ void Stack::rot() {
 
 void Scope::set(char *key, Value *value) {
 	for(Scope *curr = this; curr; curr = curr->parent) {
-		if(curr->contains(key)) {
-			curr->values.put(key, *value);
+		if(curr->values.put_if_contains(key, value)) {
 			return;
 		}
 	}
@@ -106,9 +105,12 @@ void Scope::set(char *key, Value *value) {
 
 Value* Scope::get(char *key) {
 	Scope *curr = this;
+
 	while(curr) {
-		if(curr->contains(key)) {
-			return curr->values.get_ptr(key);
+		auto x = curr->values.get_ptr(key);
+
+		if(x) {
+			return x;
 		}
 
 		curr = curr->parent;
@@ -117,15 +119,11 @@ Value* Scope::get(char *key) {
 	return &NIL;
 }
 
-bool Scope::contains(char *key) {
-	return values.contains_key(key);
-}
-
 void Scope::pop(Heap *heap) {
 	if(values.count == 0) return;
 	
 	for(u32 i = 0; i < values.size; i++) {
-		if(values.state[i] == HT_STATE_OCCUPIED) {
+		if(values.hashes[i] > HT_HASH_REMOVED) {
 			auto v = values.values[i];
 			if(v.a) heap->unmark_root(v.a);
 		}
@@ -374,9 +372,9 @@ void __rt_get_prop(Stack *stack) {
 
 	assert(object.type == VALUE_OBJECT);
 
-	if(object.object->contains_key(key)) {
-		auto x = object.object->get(key);
-		stack->push(&x);
+	auto x = object.object->get_ptr(key);
+	if(x) {
+		stack->push(x);
 	} else {
 		stack->push(&NIL);
 	}
