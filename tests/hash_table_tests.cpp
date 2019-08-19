@@ -19,7 +19,7 @@ DEFINE_TEST(hash_table_put_works) {
     assert(x.values[i] == 42);
 }
 
-DEFINE_TEST(hash_table_put_if_containS_works) {
+DEFINE_TEST(hash_table_put_if_contains_works) {
     auto x = Hash_Table<u64, u64>(hash_u64);
 
     x.put(5, 2);
@@ -96,20 +96,19 @@ DEFINE_TEST(hash_table_stress_test) {
 }
 
 DEFINE_TEST(hash_table_string_stress_test) {
-    auto x = Hash_Table<char*, u32>(hash_string);
+    auto x = Hash_Table<char*, u32>(hash_string, eq_string);
 
     const u32 N = 1000;
 
     for(u32 i = 0; i < N; i++) {
         char *buf = (char*) alloca(4 + 3 + 1);
-        sprintf(buf, "test%u", i + 1);
-        x.put(buf, i);
+        sprintf(buf, "test%u", i);
+        x.put(buf, i + 1);
     }
 
     for(u32 i = 0; i < N; i++) {
         char *buf = (char*) alloca(4 + 3 + 1);
         sprintf(buf, "test%u", i);
-        printf("%u\n", x.contains_key(buf));
         assert(x.get(buf) == i + 1);
     }
 }

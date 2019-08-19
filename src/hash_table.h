@@ -2,6 +2,7 @@
 #define HASH_TABLE_H
 
 #include <assert.h>
+#include <stdio.h> // TODO: remove this
 
 #include "types.h"
 #include "hash.h"
