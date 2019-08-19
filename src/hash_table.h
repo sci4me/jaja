@@ -44,7 +44,7 @@ private:
     
         memset(keys, 0, size * sizeof(K)); 
         memset(values, 0, size * sizeof(V)); 
-        memset(hashes, 0, size * sizeof(u8)); 
+        memset(hashes, 0, size * sizeof(u64)); 
     }
 
     void ensure_capacity() {
