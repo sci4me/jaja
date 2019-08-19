@@ -33,7 +33,7 @@ Value* Heap::alloc(u32 line, const char *func, const char *file) {
 #else
 Value* Heap::alloc() {
 #endif
-	if(allocations.count > 1000) {
+	if(allocations > 1000) {
 		gc();
 	}
 
@@ -46,42 +46,37 @@ Value* Heap::alloc() {
 	// printf("alloc a: %p : %s@%s:%d\n", a, func, file, line);
 	a->marked = false;
 	a->value.a = a;
-	allocations.push(a);
+	
+	a->next = head;
+	head = a;
+
 	return &a->value;
 }
 
 void Heap::mark_root(Allocation *a) {
 	assert(a);
-	assert(allocations.index_of(a) != -1);
+	// TODO: assert a is in our set of allocations
 
 	roots.push(a);
 }
 
 void Heap::unmark_root(Allocation *a) {
 	assert(a);
-	assert(allocations.index_of(a) != -1);
+	// TODO: assert a is in our set of allocations
 
 	auto i = roots.index_of(a);
-	if(i != -1)	roots.unordered_remove(i);
+	if(i != -1)	roots.unordered_remove(i); // TODO: should we really have this if statement? or should we assert i != -1?
 }
 
 void Heap::gc() {
-	u32 total = allocations.count; 
+	u32 total = allocations; 
 
 	u32 marked = 0;
 	FOR((&roots), i) {
 		auto root = roots.data[i];
-		assert(allocations.index_of(root) != -1);
+		// assert(allocations.index_of(root) != -1);
 		marked += mark(root);
 	}
-
-	/*
-	u32 k = 0;
-	FOR((&allocations), i) {
-		if(allocations.data[i]->marked) k++;
-	}
-	assert(k == marked);
-	*/
 
 	u32 swept = sweep();
 
@@ -90,7 +85,7 @@ void Heap::gc() {
 
 u32 Heap::mark(Allocation *a) {
 	assert(a);
-	assert(allocations.index_of(a) != -1);
+	// assert(allocations.index_of(a) != -1);
 
 	if(a->marked) return 0;
 
@@ -112,20 +107,30 @@ u32 Heap::mark(Allocation *a) {
 }
 
 u32 Heap::sweep() {
-	Array<Allocation*> to_remove;
-	FOR((&allocations), i) {
-		auto x = allocations.data[i];
-		if(x->marked) {
-			x->marked = false;
+	u32 swept = 0;
+
+	Allocation *prev = NULL;
+	Allocation *curr = head;
+
+	while(curr) {
+		auto next = curr->next;
+
+		if(curr->marked) {
+			curr->marked = false;
 		} else {
-			to_remove.push(x);
+			if(prev) {
+				prev->next = next;
+			} else {
+				head = next;
+			}
+
+			free_allocation(allocator, curr);
+			swept++;
 		}
-	}
-	FOR((&to_remove), i) {
-		auto x = to_remove.data[i];
-		allocations.unordered_remove(allocations.index_of(x));
-		free_allocation(allocator, x);
+
+		prev = curr;
+		curr = next;
 	}
 
-	return to_remove.count;
+	return swept;
 }

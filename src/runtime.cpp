@@ -162,10 +162,6 @@ static inline void call(Value v, Heap *heap, Scope *scope, Stack *stack) {
 
 	auto s = Scope(scope);
 
-	if(v.type == VALUE_LAMBDA && heap->allocations.index_of(v.a) == -1) {
-		assert(false);
-	}
-	
 	if(v.type == VALUE_LAMBDA && v.a) heap->mark_root(v.a);
 	(*v.lambda.fn)(heap, &s, stack);
 	if(v.type == VALUE_LAMBDA && v.a) heap->unmark_root(v.a);

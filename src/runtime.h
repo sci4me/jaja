@@ -58,6 +58,7 @@ struct Value {
 };
 
 struct Allocation {
+	Allocation *next;
 	bool marked;
 	Value value;
 
@@ -71,10 +72,11 @@ struct Allocation {
 struct Heap {
 	Allocator allocator;
 
-	Array<Allocation*> allocations;
+	Allocation *head;
+	u32 allocations;
 	Array<Allocation*> roots;
 
-	Heap(Allocator _allocator = cstdlib_allocator) : allocator(_allocator) {}
+	Heap(Allocator _allocator = cstdlib_allocator) : allocator(_allocator), allocations(0), head(NULL) {}
 
 #ifdef HEAP_DEBUG
 	Value* alloc(u32 line, const char *func, const char *file);
