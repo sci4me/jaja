@@ -14,15 +14,9 @@
 //  - resizing (i.e. get bigger when needed and smaller when it makes sense*)
 
 static void free_allocation(Allocator allocator, Allocation *a) {
-	switch(a->value.type) {
-		case VALUE_OBJECT:
-			a->value.object->free();
-			FREE(allocator, a->value.object);
-			break;
-		case VALUE_LAMBDA:
-			// TODO why is this no bueno?
-			// jit_free(a->value.lambda.j);
-			break;
+	if(a->value.type == VALUE_OBJECT) {
+		a->value.object->free();
+		FREE(allocator, a->value.object);
 	}
 
 	FREE(allocator, a);
@@ -49,6 +43,7 @@ Value* Heap::alloc() {
 	
 	a->next = head;
 	head = a;
+	allocations++;
 
 	return &a->value;
 }
@@ -79,8 +74,9 @@ void Heap::gc() {
 	}
 
 	u32 swept = sweep();
+	allocations -= swept;
 
-	// printf("\nGC Cycle:\n\tstart:   %u\n\tmarked:  %u\n\tswept:   %u\n\tmissing: %u\n\tend:     %u\n", total, marked, swept, total - (marked + swept), allocations.count);
+	printf("\nGC Cycle:\n\tstart:   %u\n\tmarked:  %u\n\tswept:   %u\n\tmissing: %u\n\tend:     %u\n", total, marked, swept, total - (marked + swept), allocations);
 }
 
 u32 Heap::mark(Allocation *a) {
@@ -126,6 +122,8 @@ u32 Heap::sweep() {
 
 			free_allocation(allocator, curr);
 			swept++;
+
+			curr = next;
 		}
 
 		prev = curr;

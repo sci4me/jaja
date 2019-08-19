@@ -8,7 +8,7 @@ extern "C" {
 #include "hash_table.h"
 #include "array.h"
 
-// #define HEAP_DEBUG
+#define HEAP_DEBUG
 
 #define VALUE_TRUE 			0x00
 #define VALUE_FALSE			0x01

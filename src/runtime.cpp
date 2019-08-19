@@ -117,6 +117,7 @@ Value* Scope::get(char *key) {
 }
 
 void Scope::pop(Heap *heap) {
+	if(!values.keys) return;
 	if(values.count == 0) return;
 	
 	for(u32 i = 0; i < values.size; i++) {
@@ -157,9 +158,7 @@ static inline void call(Value v, Heap *heap, Scope *scope, Stack *stack) {
 
 	auto s = Scope(scope);
 
-	if(v.type == VALUE_LAMBDA && v.a) heap->mark_root(v.a);
 	(*v.lambda.fn)(heap, &s, stack);
-	if(v.type == VALUE_LAMBDA && v.a) heap->unmark_root(v.a);
 
 	s.pop(heap);
 }
@@ -415,9 +414,6 @@ void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
 	assert(body.type == VALUE_LAMBDA || body.type == VALUE_NATIVE);
 	assert(cond.type == VALUE_LAMBDA || cond.type == VALUE_NATIVE);
 
-	if(body.type == VALUE_LAMBDA && body.a) heap->mark_root(body.a);
-	if(cond.type == VALUE_LAMBDA && cond.a) heap->mark_root(cond.a);
-
 	for(;;) {
 		(*cond.lambda.fn)(heap, scope, stack);
 
@@ -426,9 +422,6 @@ void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
 
 		(*body.lambda.fn)(heap, scope, stack);
 	}
-
-	if(body.a) heap->unmark_root(body.a);
-	if(cond.a) heap->unmark_root(cond.a);
 }
 
 void __std_print(Heap *heap, Scope *scope, Stack *stack) {

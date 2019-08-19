@@ -50,7 +50,6 @@ Value Compiler::compile(Array<Node*>* ast) {
 	auto result = GC_ALLOC(heap);
 	result->type = VALUE_LAMBDA;
 	result->lambda = compile_raw(ast);
-	assert(registersStack.count == 0);
 	return *result;
 }
 
@@ -159,15 +158,37 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 }
 
 void Compiler::compile_lambda(jit *j, Node *n) {
-	auto l = compile_raw(&n->lambda);
-
 #ifdef JIT_DEBUG
 	jit_comment(j, "__rt_push_lambda");
 #endif
 
-	auto lambda = RALLOC(); auto LINE = __LINE__;
+	//auto l = compile_raw(&n->lambda);
+	auto l = compile(&n->lambda);
 
+	auto lambda = RALLOC();
+	jit_addi(j, lambda, R_FP, jit_allocai(j, sizeof(Value)));
+
+	auto tmp = RALLOC();
+	jit_movi(j, tmp, 0);
+	jit_stxi(j, offsetof(Value, a), lambda, tmp, sizeof(Value::a));
+	jit_movi(j, tmp, VALUE_LAMBDA);
+	jit_stxi(j, offsetof(Value, type), lambda, tmp, sizeof(Value::type));
+	jit_movi(j, tmp, l.lambda.j);
+	jit_stxi(j, offsetof(Value, lambda.j), lambda, tmp, sizeof(Value::lambda.j));
+	jit_movi(j, tmp, l.lambda.fn);
+	jit_stxi(j, offsetof(Value, lambda.fn), lambda, tmp, sizeof(Value::lambda.fn));
+
+	jit_prepare(j);
+	jit_putargr(j, R_STACK);
+	jit_putargr(j, lambda);
+	jit_call_method(j, &Stack::push);
+	
+	RFREE(lambda);
+	RFREE(tmp);
+
+/*
 #ifdef HEAP_DEBUG
+	auto lambda = RALLOC(); auto LINE = __LINE__;
 	auto rz = RALLOC();
 
 	jit_movi(j, rz, 0);
@@ -181,6 +202,8 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 
 	RFREE(rz);
 #else
+	auto lambda = RALLOC();
+
 	jit_prepare(j);
 	jit_putargr(j, R_HEAP);
 	jit_call_method(j, &Heap::alloc);
@@ -202,10 +225,8 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 
 	RFREE(lambda);
 	RFREE(tmp);
+*/
 }
-
-#define xstr(a) str(a)
-#define str(a) #a
 
 #ifdef JIT_DEBUG
 	#define JIT_RT_CALL_2(fn) jit_comment(j, str(fn) "\n"); jit_prepare(j); jit_putargr(j, R_STACK); jit_call(j, fn);

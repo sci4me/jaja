@@ -84,6 +84,8 @@ struct Array {
 	}
 
 	s64 index_of(T value) {
+		if(count == 0) return -1;
+
 		for(u32 i = 0; i < count; i++) {
 			if(data[i] == value) return i;
 		}
