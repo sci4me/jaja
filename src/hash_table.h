@@ -12,6 +12,8 @@
 #define HT_HASH_REMOVED 1
 #define HT_FIRST_VALID_HASH 2
 
+#define HT_HASH_IS_OCCUPIED(x) (x >= HT_FIRST_VALID_HASH)
+
 template <typename K>
 bool default_eq_fn(K a, K b) {
     return a == b;
@@ -120,7 +122,7 @@ public:
                     values[index] = value;
                     break;
                 }
-            } else if(hashes[index] < HT_FIRST_VALID_HASH) {
+            } else if(!HT_HASH_IS_OCCUPIED(hashes[index])) {
                 keys[index] = key;
                 values[index] = value;
                 hashes[index] = hash;
@@ -132,6 +134,9 @@ public:
     }
 
     bool put_if_contains(K key, V *value) {
+        if(!keys) return false;
+        if(count == 0) return false;
+
         ensure_capacity();
 
         u64 hash = get_hash(key);
@@ -144,7 +149,7 @@ public:
                     values[index] = *value;
                     return true;
                 }
-            } else if(hashes[index] < HT_FIRST_VALID_HASH) {
+            } else if(!HT_HASH_IS_OCCUPIED(hashes[index])) {
                 return false;
             }
             index++;
@@ -152,8 +157,15 @@ public:
     }
 
     V get(K key) {
-        u64 hash = get_hash(key);
-        u64 index = hash % size;
+        // This is stupid but C++ sucks; apparently goto can't cross initialization of variables. OH-KAY, C++. - sci4me, Aug 19, 2019
+        u64 hash = 0;
+        u64 index = 0;
+
+        if(!keys) goto _return_zero;
+        if(count == 0) goto _return_zero;
+
+        hash = get_hash(key);
+        index = hash % size;
 
         for(;;) {
             index &= (size - 1);
@@ -162,21 +174,26 @@ public:
                     return values[index];
                 }
             } else if(hashes[index] == HT_HASH_EMPTY) {
-                V x;
-                memset(&x, 0, sizeof(V));
-                return x;
+                goto _return_zero;
             }
             index++;
         }
+
+_return_zero:
+        V x;
+        memset(&x, 0, sizeof(V));
+        return x;
     }
 
     V* get_ptr(K key) {
         if(!keys) return 0;
+        if(count == 0) return 0;
 
         u64 hash = get_hash(key);
         u64 index = hash % size;
 
         for(;;) {
+            // if(index >= size) index = 0;
             index &= (size - 1);
             if(hashes[index] == hash) {
                 if(eq_fn(keys[index], key)) {
@@ -191,6 +208,7 @@ public:
 
     bool contains_key(K key) {
         if(!keys) return false;
+        if(count == 0) return false;
 
         u64 hash = get_hash(key);
         u64 index = hash % size;
@@ -212,6 +230,7 @@ public:
 
     bool remove(K key) {
         if(!keys) return false;
+        if(count == 0) return false;
 
         u64 hash = get_hash(key);
         u64 index = hash % size;

@@ -109,11 +109,7 @@ Value* Scope::get(char *key) {
 
 	while(curr) {
 		auto x = curr->values.get_ptr(key);
-
-		if(x) {
-			return x;
-		}
-
+		if(x) return x;
 		curr = curr->parent;
 	}
 
@@ -124,7 +120,7 @@ void Scope::pop(Heap *heap) {
 	if(values.count == 0) return;
 	
 	for(u32 i = 0; i < values.size; i++) {
-		if(values.hashes[i] > HT_HASH_REMOVED) {
+		if(HT_HASH_IS_OCCUPIED(values.hashes[i])) {
 			auto v = values.values[i];
 			if(v.a) heap->unmark_root(v.a);
 		}
