@@ -11,6 +11,15 @@ Idk. #FigureItOut @FutureSelf
 
 */
 
+Compiler::~Compiler() {
+	FOR((&jits), i) {
+		// TODO: how can we do this better? surely we don't have to hold on to _all_ code forever?
+		// there's always the option of deoptimization, or something like it, but doing that without saving the IR will be 
+		//   probably essentially impossible lmfao
+		jit_free(jits.data[i]);
+	}
+}
+
 #ifdef JIT_RALLOC_TRACKING
 jit_value Compiler::ralloc(const char *func, const char *file, u32 line) {
 #else
@@ -73,7 +82,8 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 
 	Lambda result;
 
-	auto j = jit_init();	
+	auto j = jit_init();
+	jits.push(j);	
 	result.j = j;
 
 #ifdef JIT_DEBUG
@@ -163,7 +173,7 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 	jit_comment(j, "__rt_push_lambda");
 #endif
 
-	auto l = compile(&n->lambda); // TODO: we need to free this memory (from jit_init) somehow
+	auto l = compile(&n->lambda);
 
 	auto lambda = RALLOC();
 	jit_addi(j, lambda, R_FP, jit_allocai(j, sizeof(Value)));

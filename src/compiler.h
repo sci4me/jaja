@@ -41,8 +41,10 @@ struct Compiler {
 #endif
 	Bitset *registers;
 	Array<Bitset*> registersStack;
+	Array<jit*> jits;
 
 	Compiler() : registers(0) {};
+	~Compiler();
 
 #ifdef JIT_RALLOC_TRACKING
 	jit_value ralloc(const char *func, const char *file, const u32 line);

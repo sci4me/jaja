@@ -21,10 +21,12 @@ bool Value::is_truthy() {
 	}
 
 	assert(false);
-	return false;
 }
 
 bool Value::operator==(const Value &other) {
+	assert(type >= VALUE_TRUE && type <= VALUE_NATIVE);
+	assert(other.type >= VALUE_TRUE && other.type <= VALUE_NATIVE);
+
 	if(type != other.type) return false;
 
 	switch(type) {
