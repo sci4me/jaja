@@ -23,7 +23,9 @@ struct Array {
 	}
 
 	~Array() {
-		FREE(allocator, data);
+		if(data) {
+			FREE(allocator, data);
+		}
 	}
 
 	void clear() {

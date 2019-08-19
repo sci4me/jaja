@@ -9,10 +9,11 @@ bool Value::is_truthy() {
 		case VALUE_FALSE:	
 		case VALUE_NIL:
 			return false;
-		case VALUE_TRUE:	
 		case VALUE_NUMBER:	
-		case VALUE_STRING:	
-		case VALUE_REFERENCE:	
+			return number != 0;
+		case VALUE_TRUE:	
+		case VALUE_STRING:
+		case VALUE_REFERENCE:
 		case VALUE_OBJECT:	
 		case VALUE_LAMBDA:
 			return true;
@@ -366,7 +367,7 @@ void __rt_mod(Stack *stack) {
 void __rt_newobj(Stack *stack, Heap *heap) {
 	auto v = GC_ALLOC(heap);
 	v->type = VALUE_OBJECT;
-	v->object = (Hash_Table<Value, Value>*) malloc(sizeof(Hash_Table<Value, Value>));
+	v->object = (Hash_Table<Value, Value>*) ALLOC(cstdlib_allocator, sizeof(Hash_Table<Value, Value>));
 	*v->object = Hash_Table<Value, Value>(__value_hash);
 	stack->push(v);
 }

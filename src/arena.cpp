@@ -40,7 +40,11 @@ u8* Arena::alloc(u64 n) {
 	return p;
 }
 
+#ifdef ALLOCATOR_DEBUG
+static void* __alloc(void *data, unsigned long int n, u32 line, const char *func, const char *file) {
+#else
 static void* __alloc(void *data, unsigned long int n) {
+#endif
 	return static_cast<Arena*>(data)->alloc(n);
 }
 
