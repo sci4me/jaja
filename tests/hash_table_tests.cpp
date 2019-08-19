@@ -47,6 +47,15 @@ DEFINE_TEST(hash_table_get_works) {
     assert(x.get(11) == 0);
 }
 
+DEFINE_TEST(hash_table_get_ptr_works) {
+    auto x = Hash_Table<u64, u64>(hash_u64);
+
+    x.put(5, 7);
+
+    assert(x.get_ptr(12) == 0);
+    assert(*x.get_ptr(5) == 7);
+}
+
 DEFINE_TEST(hash_table_contains_works) {
     auto x = Hash_Table<u64, u64>(hash_u64);
 
@@ -92,6 +101,7 @@ DEFINE_TEST(hash_table_stress_test) {
     for(u32 i = 0; i < n; i++) {
         assert(x.contains_key(i * 2));
         assert(x.get(i * 2) == i * 3);
+        assert(*x.get_ptr(i * 2) == i * 3);
     }
 }
 
@@ -110,5 +120,6 @@ DEFINE_TEST(hash_table_string_stress_test) {
         char *buf = (char*) alloca(4 + 3 + 1);
         sprintf(buf, "test%u", i);
         assert(x.get(buf) == i + 1);
+        assert(*x.get_ptr(buf) == i + 1);
     }
 }
