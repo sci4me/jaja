@@ -7,7 +7,30 @@ is causing the JIT to run MUCH more slowly, possibly exponentially more slowly. 
 having an interpreter as a first stage for run-once code, before the JIT, uh.... yeahhhh.... uh...
 We can't take hundreds of millis to compile a damn function. So. What's going on? Either I'm doing something dumb or myjit sucks or like...
 Idk. #FigureItOut @FutureSelf
-					- sci4me, Aug 17 2019
+
+					- sci4me, Aug 17, 2019
+
+*/
+
+/*
+
+So, we want to change the way scopes work. We don't want to have a Scope structure at runtime _at all_.
+We should allocate variables on the stack and write to them via that pointer when storing to them, and
+  read from that pointer when loading them.
+Challenge: what if we want to access a variable in a scope about ours? How do we facilitate that?
+  It's tricky because we can't use registers because a, that's not what they're meant to be used for, b, the data
+  wouldn't fit, and c, each function has its own register set.
+We need to like, know which variables need to be passed as parameters or something
+But we can't just do that right?
+Hmmmhmhmmhmh
+
+Yeah it's surprisingly tricky.
+
+We'd need to know which variables need to be passed in from the caller and actually pass them in whenever
+  we call that lambda. Can we do this? We may have to resort to a multi-pass system where we first compute scoping
+  information and then generate code using it...?
+
+					- sci4me, Aug 19, 2019
 
 */
 

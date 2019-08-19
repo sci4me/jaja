@@ -144,9 +144,6 @@ static u64 __value_hash(Value v) {
 		case VALUE_REFERENCE:
 			return hash_string(v.string);
 		case VALUE_OBJECT:
-			// TODO
-			assert(false);
-			break;
 		case VALUE_LAMBDA:
 			return hash_ptr(v.a);
 	}
@@ -451,7 +448,6 @@ void __std_print(Heap *heap, Scope *scope, Stack *stack) {
 			printf("{}");
 			break;
 		case VALUE_LAMBDA:
-			// TODO
 			printf("λ:%p", v.a);
 			break;
 	}

@@ -259,9 +259,6 @@ void Lexer::find_next_token() {
 				} else {
 					emit(TokenType::REFERENCE);
 				}
-
-				// TOOD remove this
-				// free(s);
 			} else {
 				// TODO handle this
 				fprintf(stderr, "Unexpected character: %c\n", c);
