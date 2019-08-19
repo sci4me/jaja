@@ -32,12 +32,10 @@ s32 main(s32 argc, char **argv) {
 	// printf("\n");
 
 	auto heap = Heap();
-	auto compiler = Compiler(&heap);
+	auto compiler = Compiler();
 	
 	auto main = compiler.compile(ast);
 	delete parser_arena;
-
-	heap.mark_root(main.a);
 
 	auto G = Scope(&heap);
 
@@ -51,7 +49,6 @@ s32 main(s32 argc, char **argv) {
 	// just for fun
 	while(stack.data.count) stack.pop();
 	G.pop(&heap);
-	heap.unmark_root(main.a);
 	heap.gc();
 
 	/*

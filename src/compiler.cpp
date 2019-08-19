@@ -47,10 +47,11 @@ void Compiler::rfree(jit_value r) {
 }
 
 Value Compiler::compile(Array<Node*>* ast) {
-	auto result = GC_ALLOC(heap);
-	result->type = VALUE_LAMBDA;
-	result->lambda = compile_raw(ast);
-	return *result;
+	Value result;
+	result.a = NULL;
+	result.type = VALUE_LAMBDA;
+	result.lambda = compile_raw(ast);
+	return result;
 }
 
 Lambda Compiler::compile_raw(Array<Node*>* ast) {	
@@ -162,8 +163,7 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 	jit_comment(j, "__rt_push_lambda");
 #endif
 
-	//auto l = compile_raw(&n->lambda);
-	auto l = compile(&n->lambda);
+	auto l = compile(&n->lambda); // TODO: we need to free this memory (from jit_init) somehow
 
 	auto lambda = RALLOC();
 	jit_addi(j, lambda, R_FP, jit_allocai(j, sizeof(Value)));

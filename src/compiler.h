@@ -31,8 +31,6 @@
 #define R_STACK R(2)
 
 struct Compiler {
-	Heap *heap;
-
 #ifdef JIT_RALLOC_TRACKING
 	Hash_Table<u64, RAllocation> *allocations;
 	Array<Hash_Table<u64, RAllocation>*> allocationsStack;
@@ -44,7 +42,7 @@ struct Compiler {
 	Bitset *registers;
 	Array<Bitset*> registersStack;
 
-	Compiler(Heap *_heap) : heap(_heap), registers(0) {};
+	Compiler() : registers(0) {};
 
 #ifdef JIT_RALLOC_TRACKING
 	jit_value ralloc(const char *func, const char *file, const u32 line);
