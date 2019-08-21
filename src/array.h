@@ -9,6 +9,8 @@
 
 #define FOR(a, i) for(u32 i = 0; i < a->count; i++)
 
+#include <stdio.h>
+
 template<typename T>
 struct Array {
 	Allocator allocator;
@@ -76,6 +78,23 @@ struct Array {
 		count++;
 	}
 
+	void extend_before(u32 index, Array<T> *b) {
+		while((count + b->count) > size) extend();
+
+		for(u32 i = index; i < count; i++) {
+			u32 j = count - i - 1;
+			u32 k = j + b->count;
+			data[k] = data[j];
+		}
+
+		FOR(b, i) {
+			u32 j = index + i;
+			data[j] = b->data[i];
+		}
+
+		count += b->count;
+	}
+
 	void extend_after(u32 index, Array<T> *b) {
 		while((count + b->count) > size) extend();
 
@@ -84,7 +103,7 @@ struct Array {
 			data[j] = data[i];
 		}
 
-		for(u32 i = 0; i < b->count; i++) {
+		FOR(b, i) {
 			u32 j = index + i + 1;
 			data[j] = b->data[i];
 		}

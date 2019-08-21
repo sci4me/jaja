@@ -42,7 +42,7 @@ Compiler::~Compiler() {
 	FOR((&jits), i) {
 		// TODO: how can we do this better? surely we don't have to hold on to _all_ code forever?
 		// there's always the option of deoptimization, or something like it, but doing that without saving the IR will be 
-		//   probably essentially impossible lmfao
+		// probably essentially impossible lmfao
 		jit_free(jits.data[i]);
 	}
 }

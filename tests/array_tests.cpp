@@ -41,6 +41,95 @@ DEFINE_TEST(array_insert_after_works) {
 	assert(a.data[5] == 12);
 }
 
+#include <stdio.h>
+DEFINE_TEST(array_extend_before_works) {
+	/*
+	{
+		auto a = Array<u32>();
+
+		a.push(2);
+		a.push(4);
+		a.push(6);
+		a.push(8);
+		a.push(10);
+
+		auto b = Array<u32>();
+
+		b.push(3);
+		b.push(6);
+		b.push(9);
+
+		a.extend_before(2, &b);
+
+		assert(a.count == 8);
+		assert(a.data[0] == 2);
+		assert(a.data[1] == 4);
+		assert(a.data[2] == 3);
+		assert(a.data[3] == 6);
+		assert(a.data[4] == 9);
+		assert(a.data[5] == 6);
+		assert(a.data[6] == 8);
+		assert(a.data[7] == 10);
+	}
+
+	{
+		auto a = Array<u32>();
+
+		a.push(2);
+		a.push(4);
+		a.push(6);
+		a.push(8);
+		a.push(10);
+
+		auto b = Array<u32>();
+
+		b.push(3);
+		b.push(6);
+		b.push(9);
+
+		a.extend_before(4, &b);
+
+		assert(a.count == 8);
+		assert(a.data[0] == 2);
+		assert(a.data[1] == 4);
+		assert(a.data[2] == 6);
+		assert(a.data[3] == 8);
+		assert(a.data[4] == 3);
+		assert(a.data[5] == 6);
+		assert(a.data[6] == 9);
+		assert(a.data[7] == 10);
+	}
+	*/
+
+	{
+		auto a = Array<u32>();
+
+		a.push(2);
+		a.push(4);
+		a.push(6);
+		a.push(8);
+		a.push(10);
+
+		auto b = Array<u32>();
+
+		b.push(3);
+		b.push(6);
+		b.push(9);
+
+		a.extend_before(0, &b);
+
+		assert(a.count == 8);
+		assert(a.data[0] == 3);
+		assert(a.data[1] == 6);
+		assert(a.data[2] == 9);
+		assert(a.data[3] == 2);
+		assert(a.data[4] == 4);
+		assert(a.data[5] == 6);
+		assert(a.data[6] == 8);
+		assert(a.data[7] == 10);
+	}
+}
+
 DEFINE_TEST(array_extend_after_works) {
 	{
 		auto a = Array<u32>();

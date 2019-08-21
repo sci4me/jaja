@@ -5,6 +5,25 @@
 
 static u64 next_label = 0;
 
+static void optimize_execs(Allocator, Array<Node*> *code) {
+    u32 i = 0;
+    while(i < code->count) {
+        if(i + 1 < code->count &&
+            code->data[i]->type == NODE_LAMBDA &&
+            code->data[i + 1]->type == NODE_INSTRUCTION && code->data[i + 1]->op == AST_OP_EXEC) { 
+            auto body = code->data[i];
+
+            code->unordered_remove(i + 1);
+            code->unordered_remove(i);
+
+            if(body->lambda.count) {
+                code->extend_before(i, &body->lambda);
+            }
+        }
+        i++;
+    }
+}
+
 static void optimize_cond_execs(Allocator allocator, Array<Node*> *code) {
     u32 i = 0;
     while(i < code->count) {
@@ -45,7 +64,7 @@ static void optimize_cond_execs(Allocator allocator, Array<Node*> *code) {
                 }
                 ti.push(bt);
 
-                code->extend_after(i - 1, &ti);
+                code->extend_before(i, &ti);
                 // TODO: i += ti.count - 1 ?
             }
         }
@@ -81,6 +100,7 @@ void optimize(Allocator allocator, Array<Node*> *code) {
         if(code->data[i]->type == NODE_LAMBDA) optimize(allocator, &code->data[i]->lambda);
     }
 
+    optimize_execs(allocator, code);
     optimize_cond_execs(allocator, code);
     optimize_while_loops(allocator, code);
 }
