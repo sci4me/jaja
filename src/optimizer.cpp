@@ -46,9 +46,32 @@ static void optimize_cond_execs(Allocator allocator, Array<Node*> *code) {
                 ti.push(bt);
 
                 code->extend_after(i - 1, &ti);
+                // TODO: i += ti.count - 1 ?
             }
         }
 
+        i++;
+    }
+}
+
+static void optimize_while_loops(Allocator allocator, Array<Node*> *code) {
+    u32 i = 0;
+    while(i < code->count) {
+        if(i + 2 < code->count &&
+            code->data[i + 2]->type == NODE_INSTRUCTION && code->data[i + 2]->op == AST_OP_WHILE) {
+            /*
+
+            casees:
+                - body known, cond known
+                - body known, cond not
+                - body not,   cond known
+                - body not,   cond not
+
+            we should be able to generate code for all of these cases
+
+            */
+        }
+        
         i++;
     }
 }
@@ -57,5 +80,7 @@ void optimize(Allocator allocator, Array<Node*> *code) {
     FOR(code, i) {
         if(code->data[i]->type == NODE_LAMBDA) optimize(allocator, &code->data[i]->lambda);
     }
+
     optimize_cond_execs(allocator, code);
+    optimize_while_loops(allocator, code);
 }

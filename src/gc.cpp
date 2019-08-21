@@ -79,7 +79,7 @@ void Heap::gc() {
 	u32 swept = sweep();
 	allocations -= swept;
 
-	printf("\nGC Cycle:\n\tstart:   %u\n\tmarked:  %u\n\tswept:   %u\n\tmissing: %u\n\tend:     %u\n", total, marked, swept, total - (marked + swept), allocations);
+	// printf("\nGC Cycle:\n\tstart:   %u\n\tmarked:  %u\n\tswept:   %u\n\tmissing: %u\n\tend:     %u\n", total, marked, swept, total - (marked + swept), allocations);
 }
 
 u32 Heap::mark(Allocation *a) {

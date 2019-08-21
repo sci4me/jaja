@@ -1,5 +1,9 @@
 #include "compiler.h"
 
+#if defined(JIT_DEBUG) || defined(JIT_RALLOC_TRACKING) || defined(JIT_MAX_RALLOC_TRACKING)
+#include <stdio.h>
+#endif
+
 /*
 
 It seems to be the case that changing the JIT to generate code that does more of the work itself rather than calling out to a runtime function
@@ -139,7 +143,7 @@ Lambda Compiler::compile_raw(Array<Node*> *ast) {
 				compile_constant(j, node);
 				break;
 			default:
-				compile_instruction(j, node);
+				compile_instruction(j, node, ast, i);
 				break;
 		}
 	}
@@ -276,7 +280,9 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 	#define JIT_RT_CALL_012(fn) jit_prepare(j); jit_putargr(j, R_HEAP); jit_putargr(j, R_SCOPE); jit_putargr(j, R_STACK); jit_call(j, fn);
 #endif
 
-void Compiler::compile_instruction(jit *j, Node *n) {
+#include <stdio.h>
+
+void Compiler::compile_instruction(jit *j, Node *n, Array<Node*> *ast, u32 index) {
 	switch(n->op) {
 		case AST_OP_EQ:
 			JIT_RT_CALL_2(__rt_eq);
@@ -582,6 +588,21 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			JIT_RT_CALL_012(__rt_while);
 			break;
 		case AST_OP_BRANCH: {
+			// This is dumb as hecc; we have to scan to figure out whether we're branching forward or backward.
+			// Because myjit sucks.
+			// 					- sci4me, Aug 21, 2019
+
+			bool reverse = false;
+			for(u32 i = 0; i < index; i++) {
+				auto x = ast->data[i];
+				if(x->type == NODE_INSTRUCTION && x->op == AST_OP_BRANCH_TARGET && x->label == n->label) {
+					reverse = true;
+					break;
+				} 
+			}
+
+			printf("reverse: %u\n", reverse);
+
 			auto value = RALLOC();
 			jit_addi(j, value, R_FP, jit_allocai(j, sizeof(Value)));
 			

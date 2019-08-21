@@ -43,8 +43,9 @@ struct Compiler {
 	Array<Bitset*> registersStack;
 	Array<jit*> jits;
 	Hash_Table<u64, jit_op*> labels;
+	Hash_Table<u64, jit_label*> reverse_labels;
 
-	Compiler() : registers(0), labels(Hash_Table<u64, jit_op*>(hash_u64)) {};
+	Compiler() : registers(0), labels(decltype(Compiler::labels)(hash_u64)), reverse_labels(decltype(Compiler::reverse_labels)(hash_u64)) {};
 	~Compiler();
 
 #ifdef JIT_RALLOC_TRACKING
@@ -57,7 +58,7 @@ struct Compiler {
 	Value compile(Array<Node*> *ast);
 	Lambda compile_raw(Array<Node*> *ast);
 	void compile_lambda(jit *j, Node *n);
-	void compile_instruction(jit *j, Node *n);
+	void compile_instruction(jit *j, Node *n, Array<Node*> *ast, u32 index);
 	void compile_constant(jit *j, Node *n);
 };
 
