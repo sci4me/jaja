@@ -1,4 +1,5 @@
 #include "compiler.h"
+#include "optimizer.h"
 
 /*
 
@@ -78,7 +79,7 @@ void Compiler::rfree(jit_value r) {
 #endif
 }
 
-Value Compiler::compile(Array<Node*>* ast) {
+Value Compiler::compile(Array<Node*> *ast) {
 	Value result;
 	result.a = NULL;
 	result.type = VALUE_LAMBDA;
@@ -86,7 +87,9 @@ Value Compiler::compile(Array<Node*>* ast) {
 	return result;
 }
 
-Lambda Compiler::compile_raw(Array<Node*>* ast) {	
+Lambda Compiler::compile_raw(Array<Node*> *ast) {
+	optimize(ast_allocator, ast);
+
 	registersStack.push(registers);
 	registers = new Bitset();
 
@@ -166,7 +169,7 @@ Lambda Compiler::compile_raw(Array<Node*>* ast) {
 #ifdef JIT_RALLOC_TRACKING
 	if(registers->bits_set()) {
 		for(u32 i = 0; i < allocations->size; i++) {
-			if(allocations->state[i] == HT_STATE_OCCUPIED) {
+			if(allocations->hashes[i] >= HT_FIRST_VALID_HASH) {
 				auto a = allocations->values[i];
 				printf("ralloc (%u) : %s@%s:%u\n", allocations->keys[i], a.func, a.file, a.line);
 			}
@@ -262,6 +265,9 @@ void Compiler::compile_lambda(jit *j, Node *n) {
 }
 
 #ifdef JIT_DEBUG
+	#define xstr(x) #x
+	#define str(x) xstr(x)
+
 	#define JIT_RT_CALL_2(fn) jit_comment(j, str(fn) "\n"); jit_prepare(j); jit_putargr(j, R_STACK); jit_call(j, fn);
 	#define JIT_RT_CALL_20(fn) jit_comment(j, str(fn) "\n"); jit_prepare(j); jit_putargr(j, R_STACK); jit_putargr(j, R_HEAP); jit_call(j, fn);
 	#define JIT_RT_CALL_21(fn) jit_comment(j, str(fn) "\n"); jit_prepare(j); jit_putargr(j, R_STACK); jit_putargr(j, R_SCOPE); jit_call(j, fn);
@@ -297,6 +303,8 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			JIT_RT_CALL_2(__rt_or);
 			break;
 		case AST_OP_NOT: {
+			JIT_RT_CALL_2(__rt_not);
+/*
 #ifdef JIT_DEBUG
 			jit_comment(j, "__rt_not");
 #endif
@@ -335,6 +343,7 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 			RFREE(x);
 			RFREE(type);
 			RFREE(tmp);
+*/
 			break;
 		}
 		case AST_OP_ADD:
@@ -575,6 +584,34 @@ void Compiler::compile_instruction(jit *j, Node *n) {
 		case AST_OP_WHILE:
 			JIT_RT_CALL_012(__rt_while);
 			break;
+		case AST_OP_BRANCH: {
+			auto value = RALLOC();
+			jit_addi(j, value, R_FP, jit_allocai(j, sizeof(Value)));
+			
+			jit_prepare(j);
+			jit_putargr(j, R_STACK);
+			jit_putargr(j, value);
+			jit_call_method(j, &Stack::pop_into);
+
+			jit_prepare(j);
+			jit_putargr(j, value);
+			jit_call_method(j, &Value::is_truthy);
+			auto cond = RALLOC();
+			jit_retval(j, cond);
+			
+			auto op = jit_beqi(j, 0, cond, 0);
+
+			labels.put(n->label, op);
+
+			RFREE(value);
+			RFREE(cond);
+			break;
+		}
+		case AST_OP_BRANCH_TARGET: {
+			auto op = labels.get(n->label);
+			jit_patch(j, op);
+			break;
+		}
 		default:
 			assert(false);
 	}

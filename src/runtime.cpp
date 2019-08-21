@@ -255,7 +255,7 @@ void __rt_not(Stack *stack) {
 
 	if(a->type == VALUE_TRUE) {
 		a->type = VALUE_FALSE;
-	} else if(a->type == VALUE_FALSE) {
+	} else if(a->type == VALUE_FALSE || a->type == VALUE_NIL) {
 		a->type = VALUE_TRUE;
 	} else {
 		assert(false);

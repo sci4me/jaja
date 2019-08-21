@@ -9,8 +9,6 @@ static void indent(u32 level) {
 }
 
 static void print_instruction(Node *node, u32 op, u32 level) {
-	indent(level);
-
 	switch(op) {
 		case AST_OP_EQ:
 			printf("eq\n");
@@ -84,6 +82,12 @@ static void print_instruction(Node *node, u32 op, u32 level) {
 		case AST_OP_WHILE:
 			printf("while\n");
 			break;
+		case AST_OP_BRANCH:
+			printf("branch %u\n", node->label);
+			break;
+		case AST_OP_BRANCH_TARGET:
+			printf("branch_target %u\n", node->label);
+			break;
 		default:
             assert(false);
 			break;	
@@ -92,6 +96,7 @@ static void print_instruction(Node *node, u32 op, u32 level) {
 
 void Node::print_as_bytecode(u32 level) {
 	indent(level);
+
     switch(type) {
         case NODE_TRUE:
 			printf("true\n");
@@ -119,6 +124,7 @@ void Node::print_as_bytecode(u32 level) {
             FOR((&lambda), i) {
 	        	lambda.data[i]->print_as_bytecode(level + 1);
 	        }
+			indent(level);
         	printf("}\n");
             break;
         default:

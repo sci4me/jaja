@@ -32,7 +32,7 @@ s32 main(s32 argc, char **argv) {
 	// printf("\n");
 
 	auto heap = Heap();
-	auto compiler = Compiler();
+	auto compiler = Compiler(parser_arena->as_allocator());
 	
 	auto main = compiler.compile(ast);
 	delete parser_arena;

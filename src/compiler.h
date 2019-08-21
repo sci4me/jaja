@@ -42,8 +42,10 @@ struct Compiler {
 	Bitset *registers;
 	Array<Bitset*> registersStack;
 	Array<jit*> jits;
+	Allocator ast_allocator;
+	Hash_Table<u64, jit_op*> labels;
 
-	Compiler() : registers(0) {};
+	Compiler(Allocator _ast_allocator) : registers(0), ast_allocator(_ast_allocator), labels(Hash_Table<u64, jit_op*>(hash_u64)) {};
 	~Compiler();
 
 #ifdef JIT_RALLOC_TRACKING
@@ -53,8 +55,8 @@ struct Compiler {
 #endif
 	void rfree(jit_value r);
 
-	Value compile(Array<Node*>* ast);
-	Lambda compile_raw(Array<Node*>* ast);
+	Value compile(Array<Node*> *ast);
+	Lambda compile_raw(Array<Node*> *ast);
 	void compile_lambda(jit *j, Node *n);
 	void compile_instruction(jit *j, Node *n);
 	void compile_constant(jit *j, Node *n);

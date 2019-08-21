@@ -28,23 +28,72 @@ struct Array {
 		}
 	}
 
-	void clear() {
-		count = 0;
-	}
-
-	void push(T value) {
+	void extend() {
 		if(data == 0) {
 			data = (T*) ALLOC(allocator, size * sizeof(T));
-		}
-
-		if(count >= size - 1) {
+		} else {
 			auto old_size = size;
 			size *= 2;
 			auto new_data = (T*) ALLOC(allocator, size * sizeof(T));
 			memcpy(new_data, data, old_size * sizeof(T));
-			FREE(allocator, data);
+			FREE(allocator, data); 
 			data = new_data;
 		}
+	}
+
+	void ensure_capacity() {
+		if(!data|| count >= size - 1) {
+			extend();
+		}
+	}
+
+	void clear() {
+		count = 0;
+	}
+
+	void insert_before(u32 index, T value) {
+		ensure_capacity();
+
+		assert(index < count);
+
+		for(u32 i = count - 1; i > index; i--) {
+			data[i + 1] = data[i];
+		}
+		data[index + 1] = data[index];
+		data[index] = value;
+		count++; 
+	}
+
+	void insert_after(u32 index, T value) {
+		ensure_capacity();
+
+		assert(index < count);
+
+		for(u32 i = count - 1; i > index; i--) {
+			data[i + 1] = data[i];
+		}
+		data[index + 1] = value;
+		count++;
+	}
+
+	void extend_after(u32 index, Array<T> *b) {
+		while((count + b->count) > size) extend();
+
+		for(u32 i = count - 1; i >= index + 1; i--) {
+			u32 j = i + b->count;
+			data[j] = data[i];
+		}
+
+		for(u32 i = 0; i < b->count; i++) {
+			u32 j = index + i + 1;
+			data[j] = b->data[i];
+		}
+
+		count += b->count;
+	}
+
+	void push(T value) {
+		ensure_capacity();
 
 		data[count++] = value;
 	}
@@ -65,7 +114,7 @@ struct Array {
 		if(index >= count) return false;
 
 		auto v = pop();
-		if(index < count) {
+			if(index < count) {
 			data[index] = v;
 		}
 
