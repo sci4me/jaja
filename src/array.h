@@ -79,12 +79,15 @@ struct Array {
 	}
 
 	void extend_before(u32 index, Array<T> *b) {
+		if(!b->count) return;
+		
 		while((count + b->count) > size) extend();
 
-		for(u32 i = index; i < count; i++) {
-			u32 j = count - i - 1;
-			u32 k = j + b->count;
-			data[k] = data[j];
+		for(u32 i = count - 1; i >= index; i--) {
+			u32 j = i + b->count;
+			data[j] = data[i];
+
+			if(i == 0) break;
 		}
 
 		FOR(b, i) {
@@ -96,6 +99,8 @@ struct Array {
 	}
 
 	void extend_after(u32 index, Array<T> *b) {
+		if(!b->count) return;
+
 		while((count + b->count) > size) extend();
 
 		for(u32 i = count - 1; i >= index + 1; i--) {

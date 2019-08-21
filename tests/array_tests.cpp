@@ -41,9 +41,7 @@ DEFINE_TEST(array_insert_after_works) {
 	assert(a.data[5] == 12);
 }
 
-#include <stdio.h>
 DEFINE_TEST(array_extend_before_works) {
-	/*
 	{
 		auto a = Array<u32>();
 
@@ -99,7 +97,6 @@ DEFINE_TEST(array_extend_before_works) {
 		assert(a.data[6] == 9);
 		assert(a.data[7] == 10);
 	}
-	*/
 
 	{
 		auto a = Array<u32>();

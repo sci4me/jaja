@@ -6,7 +6,7 @@
 // Theoretically we can do better than this; there are cases where we know what something is at compile time
 // but just don't have easy access to that information for whatever reason i.e. it's a native function that exists
 // within the global scope. But if/when scopes change, that will likely effect this. *shrug*
-//                  - sci4me, Aug 21, 2019
+ //                  - sci4me, Aug 21, 2019
 
 static u64 next_label = 0;
 
@@ -32,6 +32,8 @@ static void optimize_execs(Allocator, Array<Node*> *code) {
 static void optimize_cond_execs(Allocator allocator, Array<Node*> *code) {
     u32 i = 0;
     while(i < code->count) {
+        printf("%u %u\n", i, code->count);
+
         if(i + 1 < code->count &&
             code->data[i]->type == NODE_LAMBDA &&
             code->data[i + 1]->type == NODE_INSTRUCTION && code->data[i + 1]->op == AST_OP_COND_EXEC
@@ -40,6 +42,8 @@ static void optimize_cond_execs(Allocator allocator, Array<Node*> *code) {
 
             code->ordered_remove(i + 1);
             code->ordered_remove(i);
+
+            auto ti = Array<Node*>();
 
             if(body->lambda.count == 0) {
                 // TODO: We could do better here. For example, if the node before the lambda
@@ -50,7 +54,7 @@ static void optimize_cond_execs(Allocator allocator, Array<Node*> *code) {
                 auto n = (Node*) ALLOC(allocator, sizeof(Node));
                 n->type = NODE_INSTRUCTION;
                 n->op = AST_OP_DROP;
-                code->insert_before(i, n);
+                ti.push(n);
             } else {
                 auto bn = (Node*) ALLOC(allocator, sizeof(Node));
                 bn->type = NODE_INSTRUCTION;
@@ -62,16 +66,17 @@ static void optimize_cond_execs(Allocator allocator, Array<Node*> *code) {
                 bt->op = AST_OP_BRANCH_TARGET;
                 bt->label = bn->label;
 
-                auto ti = Array<Node*>();
                 ti.push(bn);
                 FOR((&body->lambda), j) {
                     ti.push(body->lambda.data[j]);
                 }
                 ti.push(bt);
-
-                code->extend_before(i, &ti);
-                // TODO: i += ti.count - 1 ?
             }
+
+            code->extend_before(i, &ti);
+            i += ti.count - 1;
+    
+            assert(code->data[i]->type == NODE_INSTRUCTION && code->data[i]->op == AST_OP_BRANCH_TARGET);
         }
 
         i++;
@@ -92,8 +97,15 @@ static void optimize_while_loops(Allocator allocator, Array<Node*> *code) {
                 - body not,   cond not
 
             we should be able to generate code for all of these cases
+            however, for now, we'll only handle the first case
 
             */
+           if(code->data[i]->type == NODE_LAMBDA && code->data[i + 1]->type == NODE_LAMBDA) {
+               auto cond = code->data[i];
+               auto body = code->data[i + 1];
+
+               printf("got here!\n");
+           }
         }
         
         i++;
