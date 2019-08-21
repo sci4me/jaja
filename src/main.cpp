@@ -29,10 +29,10 @@ s32 main(s32 argc, char **argv) {
 
 	optimize(parser_arena->as_allocator(), ast);
 
-	FOR(ast, i) {
-		ast->data[i]->print_as_bytecode();
-	}
-	printf("\n");
+	// FOR(ast, i) {
+		// ast->data[i]->print_as_bytecode();
+	// }
+	// printf("\n");
 
 	auto heap = Heap();
 	auto compiler = Compiler();

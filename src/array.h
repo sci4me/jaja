@@ -83,11 +83,13 @@ struct Array {
 		
 		while((count + b->count) > size) extend();
 
-		for(u32 i = count - 1; i >= index; i--) {
-			u32 j = i + b->count;
-			data[j] = data[i];
+		if(count) {
+			for(u32 i = count - 1; i >= index; i--) {
+				u32 j = i + b->count;
+				data[j] = data[i];
 
-			if(i == 0) break;
+				if(i == 0) break;
+			}
 		}
 
 		FOR(b, i) {
@@ -103,9 +105,11 @@ struct Array {
 
 		while((count + b->count) > size) extend();
 
-		for(u32 i = count - 1; i >= index + 1; i--) {
-			u32 j = i + b->count;
-			data[j] = data[i];
+		if(count) {
+			for(u32 i = count - 1; i >= index + 1; i--) {
+				u32 j = i + b->count;
+				data[j] = data[i];
+			}
 		}
 
 		FOR(b, i) {

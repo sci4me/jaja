@@ -85,6 +85,12 @@ static void print_instruction(Node *node, u32 op, u32 level) {
 		case AST_OP_BRANCH:
 			printf("branch %u\n", node->label);
 			break;
+		case AST_OP_BRANCH_IF_TRUE:
+			printf("branch_if_true %u\n", node->label);
+			break;
+		case AST_OP_BRANCH_IF_FALSE:
+			printf("branch_if_false %u\n", node->label);
+			break;
 		case AST_OP_BRANCH_TARGET:
 			printf("branch_target %u\n", node->label);
 			break;

@@ -593,15 +593,37 @@ void Compiler::compile_instruction(jit *j, Node *n, Array<Node*> *ast, u32 index
 			// 					- sci4me, Aug 21, 2019
 
 			bool reverse = false;
+			u32 reverse_label = 0;
 			for(u32 i = 0; i < index; i++) {
 				auto x = ast->data[i];
 				if(x->type == NODE_INSTRUCTION && x->op == AST_OP_BRANCH_TARGET && x->label == n->label) {
 					reverse = true;
+					reverse_label = n->label;
 					break;
 				} 
 			}
 
-			printf("reverse: %u\n", reverse);
+			if(reverse) {
+				auto x = reverse_labels.get(reverse_label);
+				jit_jmpi(j, x);
+			} else {
+				auto op = jit_jmpi(j, 0);
+				labels.put(n->label, op);
+			}
+			break;
+		}
+		case AST_OP_BRANCH_IF_FALSE:
+		case AST_OP_BRANCH_IF_TRUE: {
+			bool reverse = false;
+			u32 reverse_label = 0;
+			for(u32 i = 0; i < index; i++) {
+				auto x = ast->data[i];
+				if(x->type == NODE_INSTRUCTION && x->op == AST_OP_BRANCH_TARGET && x->label == n->label) {
+					reverse = true;
+					reverse_label = n->label;
+					break;
+				} 
+			}
 
 			auto value = RALLOC();
 			jit_addi(j, value, R_FP, jit_allocai(j, sizeof(Value)));
@@ -616,18 +638,47 @@ void Compiler::compile_instruction(jit *j, Node *n, Array<Node*> *ast, u32 index
 			jit_call_method(j, &Value::is_truthy);
 			auto cond = RALLOC();
 			jit_retval(j, cond);
-			
-			auto op = jit_beqi(j, 0, cond, 0);
 
-			labels.put(n->label, op);
+			if(reverse) {
+				auto x = reverse_labels.get(reverse_label);
+				if(n->op == AST_OP_BRANCH_IF_FALSE) {
+					jit_beqi(j, x, cond, 0);
+				} else {
+					jit_bnei(j, (jit_value)x, cond, 0);
+				}
+			} else {
+				jit_op *op;
+
+				if(n->op == AST_OP_BRANCH_IF_FALSE) {
+					op = jit_beqi(j, 0, cond, 0);
+				} else {
+					op = jit_bnei(j, 0, cond, 0);
+				}
+
+				labels.put(n->label, op);
+			}
 
 			RFREE(value);
 			RFREE(cond);
 			break;
 		}
 		case AST_OP_BRANCH_TARGET: {
-			auto op = labels.get(n->label);
-			jit_patch(j, op);
+			bool reverse = true;
+			for(u32 i = 0; i < index; i++) {
+				auto x = ast->data[i];
+				if(x->type == NODE_INSTRUCTION && (x->op == AST_OP_BRANCH || x->op == AST_OP_BRANCH_IF_TRUE || x->op == AST_OP_BRANCH_IF_FALSE) && x->label == n->label) {
+					reverse = false;
+					break;
+				} 
+			}
+
+			if(reverse) {
+				reverse_labels.put(n->label, jit_get_label(j));
+			} else {
+				auto x = labels.get(n->label);
+				assert(x);
+				jit_patch(j, x);
+			}
 			break;
 		}
 		default:

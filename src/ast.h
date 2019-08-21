@@ -39,7 +39,9 @@
 #define AST_OP_WHILE			0x17
 
 #define AST_OP_BRANCH			0x18
-#define AST_OP_BRANCH_TARGET	0x19
+#define AST_OP_BRANCH_IF_TRUE	0x19
+#define AST_OP_BRANCH_IF_FALSE	0x1A
+#define AST_OP_BRANCH_TARGET	0x1B
 
 struct Node {
 	u8 type;

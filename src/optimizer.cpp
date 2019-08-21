@@ -10,13 +10,16 @@
 
 static u64 next_label = 0;
 
-static void optimize_execs(Allocator, Array<Node*> *code) {
+static void optimize_execs(Allocator allocator, Array<Node*> *code) {
     u32 i = 0;
     while(i < code->count) {
         if(i + 1 < code->count &&
             code->data[i]->type == NODE_LAMBDA &&
             code->data[i + 1]->type == NODE_INSTRUCTION && code->data[i + 1]->op == AST_OP_EXEC) { 
             auto body = code->data[i];
+
+            FREE(allocator, code->data[i]);
+            FREE(allocator, code->data[i + 1]);
 
             code->unordered_remove(i + 1);
             code->unordered_remove(i);
@@ -32,13 +35,14 @@ static void optimize_execs(Allocator, Array<Node*> *code) {
 static void optimize_cond_execs(Allocator allocator, Array<Node*> *code) {
     u32 i = 0;
     while(i < code->count) {
-        printf("%u %u\n", i, code->count);
-
         if(i + 1 < code->count &&
             code->data[i]->type == NODE_LAMBDA &&
             code->data[i + 1]->type == NODE_INSTRUCTION && code->data[i + 1]->op == AST_OP_COND_EXEC
         ) {
             auto body = code->data[i];
+
+            FREE(allocator, code->data[i]);
+            FREE(allocator, code->data[i + 1]);
 
             code->ordered_remove(i + 1);
             code->ordered_remove(i);
@@ -58,7 +62,7 @@ static void optimize_cond_execs(Allocator allocator, Array<Node*> *code) {
             } else {
                 auto bn = (Node*) ALLOC(allocator, sizeof(Node));
                 bn->type = NODE_INSTRUCTION;
-                bn->op = AST_OP_BRANCH;
+                bn->op = AST_OP_BRANCH_IF_FALSE;
                 bn->label = next_label++;
 
                 auto bt = (Node*) ALLOC(allocator, sizeof(Node));
@@ -100,12 +104,58 @@ static void optimize_while_loops(Allocator allocator, Array<Node*> *code) {
             however, for now, we'll only handle the first case
 
             */
-           if(code->data[i]->type == NODE_LAMBDA && code->data[i + 1]->type == NODE_LAMBDA) {
-               auto cond = code->data[i];
-               auto body = code->data[i + 1];
+            if(code->data[i]->type == NODE_LAMBDA && code->data[i + 1]->type == NODE_LAMBDA) {
+                auto cond = code->data[i];
+                auto body = code->data[i + 1];
 
-               printf("got here!\n");
-           }
+                FREE(allocator, code->data[i]);
+                FREE(allocator, code->data[i + 1]);
+                FREE(allocator, code->data[i + 2]);
+
+                code->ordered_remove(i + 2);
+                code->ordered_remove(i + 1);
+                code->ordered_remove(i);
+            
+                auto ti = Array<Node*>();
+
+                auto check = (Node*) ALLOC(allocator, sizeof(Node));
+                check->type = NODE_INSTRUCTION;
+                check->op = AST_OP_BRANCH_TARGET;
+                check->label = next_label++;
+                ti.push(check);
+
+                FOR((&cond->lambda), i) {
+                    ti.push(cond->lambda.data[i]);
+                }
+
+                auto post_cond = (Node*) ALLOC(allocator, sizeof(Node));
+                post_cond->type = NODE_INSTRUCTION;
+                post_cond->op = AST_OP_BRANCH_IF_FALSE;
+                post_cond->label = next_label++;
+                ti.push(post_cond);
+
+                FOR((&body->lambda), i) {
+                    ti.push(body->lambda.data[i]);
+                }
+
+                {
+                    auto x = (Node*) ALLOC(allocator, sizeof(Node));
+                    x->type = NODE_INSTRUCTION;
+                    x->op = AST_OP_BRANCH;
+                    x->label = check->label;
+                    ti.push(x);
+                }
+
+                {
+                    auto x = (Node*) ALLOC(allocator, sizeof(Node));
+                    x->type = NODE_INSTRUCTION;
+                    x->op = AST_OP_BRANCH_TARGET;
+                    x->label = post_cond->label;
+                    ti.push(x);
+                }
+
+                code->extend_before(i, &ti);
+            }
         }
         
         i++;

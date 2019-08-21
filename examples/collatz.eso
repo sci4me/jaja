@@ -2,7 +2,7 @@
 [n:0s:[n;1=~][n;collatz;!n:s;1+s:]#s;]steps:
 
 1
-[$1000<][
+[$10000<][
     $
     $print;!" = "print;!
     steps;!
