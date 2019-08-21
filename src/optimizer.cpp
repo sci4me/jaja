@@ -3,6 +3,11 @@
 #include "optimizer.h"
 #include "runtime.h"
 
+// Theoretically we can do better than this; there are cases where we know what something is at compile time
+// but just don't have easy access to that information for whatever reason i.e. it's a native function that exists
+// within the global scope. But if/when scopes change, that will likely effect this. *shrug*
+//                  - sci4me, Aug 21, 2019
+
 static u64 next_label = 0;
 
 static void optimize_execs(Allocator, Array<Node*> *code) {
