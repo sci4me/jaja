@@ -29,6 +29,7 @@ Value* Heap::alloc(u32 line, const char *func, const char *file) {
 #else
 Value* Heap::alloc() {
 #endif
+	// TODO: percentage? idk fam
 	if(allocations > 1000) {
 		gc();
 	}
@@ -38,8 +39,8 @@ Value* Heap::alloc() {
 	a->line = line;
 	a->func = func;
 	a->file = file;
+	printf("alloc a: %p : %s@%s:%d\n", a, func, file, line);
 #endif
-	// printf("alloc a: %p : %s@%s:%d\n", a, func, file, line);
 	a->marked = false;
 	a->value.a = a;
 	

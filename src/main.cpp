@@ -6,6 +6,7 @@
 #include "compiler.h"
 #include "gc.h"
 #include "arena.h"
+#include "optimizer.h"
 
 #define ADD_STD_FN(g, func, name) { Value v; v.a = 0; v.type = VALUE_NATIVE; v.lambda.fn = func; g.set((char*)name, &v); }
 
@@ -26,13 +27,15 @@ s32 main(s32 argc, char **argv) {
 	auto ast = p.parse();
 	free(source);
 
-	// FOR(ast, i) {
-	// 	ast->data[i]->print_as_bytecode();
-	// }
-	// printf("\n");
+	optimize(parser_arena->as_allocator(), ast);
+
+	FOR(ast, i) {
+		ast->data[i]->print_as_bytecode();
+	}
+	printf("\n");
 
 	auto heap = Heap();
-	auto compiler = Compiler(parser_arena->as_allocator());
+	auto compiler = Compiler();
 	
 	auto main = compiler.compile(ast);
 	delete parser_arena;
@@ -50,6 +53,9 @@ s32 main(s32 argc, char **argv) {
 	while(stack.data.count) stack.pop();
 	G.pop(&heap);
 	heap.gc();
+
+	assert(heap.allocations == 0);
+	assert(heap.roots.count == 0);
 
 	/*
 	FOR((&heap.allocations), i) {

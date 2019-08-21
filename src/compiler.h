@@ -42,10 +42,9 @@ struct Compiler {
 	Bitset *registers;
 	Array<Bitset*> registersStack;
 	Array<jit*> jits;
-	Allocator ast_allocator;
 	Hash_Table<u64, jit_op*> labels;
 
-	Compiler(Allocator _ast_allocator) : registers(0), ast_allocator(_ast_allocator), labels(Hash_Table<u64, jit_op*>(hash_u64)) {};
+	Compiler() : registers(0), labels(Hash_Table<u64, jit_op*>(hash_u64)) {};
 	~Compiler();
 
 #ifdef JIT_RALLOC_TRACKING

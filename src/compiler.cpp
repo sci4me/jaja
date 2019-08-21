@@ -1,5 +1,4 @@
 #include "compiler.h"
-#include "optimizer.h"
 
 /*
 
@@ -88,8 +87,6 @@ Value Compiler::compile(Array<Node*> *ast) {
 }
 
 Lambda Compiler::compile_raw(Array<Node*> *ast) {
-	optimize(ast_allocator, ast);
-
 	registersStack.push(registers);
 	registers = new Bitset();
 
@@ -169,7 +166,7 @@ Lambda Compiler::compile_raw(Array<Node*> *ast) {
 #ifdef JIT_RALLOC_TRACKING
 	if(registers->bits_set()) {
 		for(u32 i = 0; i < allocations->size; i++) {
-			if(allocations->hashes[i] >= HT_FIRST_VALID_HASH) {
+			if(HT_HASH_IS_OCCUPIED(allocations->hashes[i])) {
 				auto a = allocations->values[i];
 				printf("ralloc (%u) : %s@%s:%u\n", allocations->keys[i], a.func, a.file, a.line);
 			}
