@@ -10,6 +10,26 @@
 
 #define ADD_STD_FN(g, func, name) { Value v; v.a = 0; v.type = VALUE_NATIVE; v.lambda.fn = func; g.set((char*)name, &v); }
 
+#include <stdlib.h>
+#include <jit/jit.h>
+#include <jit/jit-type.h>
+
+static void compile_and_run(char *source) {
+	auto ctx = jit_context_create();
+	
+	jit_context_build_start(ctx);
+
+	auto signature = jit_type_create_signature(jit_abi_cdecl, jit_type_void, 0, 0, 0);
+	auto func = jit_function_create(ctx, signature);
+
+	jit_function_compile(func);
+	jit_context_build_end(ctx);
+
+	jit_function_apply(func, 0, 0);
+
+	jit_context_destroy(ctx);	
+}
+
 s32 main(s32 argc, char **argv) {
 	if(argc != 2) {
 		fprintf(stderr, "Usage: %s <file>\n", argv[0]);
@@ -22,6 +42,10 @@ s32 main(s32 argc, char **argv) {
 		return 1;
 	}
 
+	compile_and_run(source);
+	free(source);
+
+	/*
 	auto parser_arena = new Arena();
 	auto p = Parser(parser_arena->as_allocator(), argv[1], source);
 	auto ast = p.parse();

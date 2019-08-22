@@ -157,7 +157,7 @@ static inline void call(Value v, Heap *heap, Scope *scope, Stack *stack) {
 
 	auto s = Scope(scope);
 
-	(*v.lambda.fn)(heap, &s, stack);
+	(*v.lambda)(heap, &s, stack);
 
 	s.pop(heap);
 }
@@ -414,12 +414,12 @@ void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
 	assert(cond.type == VALUE_LAMBDA || cond.type == VALUE_NATIVE);
 
 	for(;;) {
-		(*cond.lambda.fn)(heap, scope, stack);
+		(*cond.lambda)(heap, scope, stack);
 
 		auto v = stack->pop();
 		if(!v.is_truthy()) break;
 
-		(*body.lambda.fn)(heap, scope, stack);
+		(*body.lambda)(heap, scope, stack);
 	}
 }
 
