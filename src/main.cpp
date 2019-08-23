@@ -86,12 +86,12 @@ static void compile_and_run(char *source) {
 			case '.': {
 				auto x = jit_insn_load_relative(j, dp, 0, jit_type_ubyte);
 				jit_insn_call_native(j, "putchar", (void*)putchar, putchar_signature, &x, 1, JIT_CALL_NOTHROW);				
-
 				i++;
 				break;
 			}
 			case ',': {
-				// TODO
+				auto x = jit_insn_call_native(j, "getchar", (void*)getchar, getchar_signature, 0, 0, JIT_CALL_NOTHROW);
+				jit_insn_store_relative(j, dp, 0, x);
 				i++;
 				break;
 			}
