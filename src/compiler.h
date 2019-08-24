@@ -9,11 +9,16 @@
 #include "gc.h"
 #include "bitset.h"
 
+#define jit_insn_call_native_method(j, name, method, signature, args, nargs, flags) { auto fptr = method; jit_insn_call_native(j, name, reinterpret_cast<void*&>(fptr), signature, args, nargs, flags); } 
+
 struct Compiler {
 	jit_context_t ctx;
 
 	jit_type_t lambda_fn_signature;
 	jit_type_t stack_push_signature;
+	jit_type_t stack_dup_signature;
+	jit_type_t stack_drop_signature;
+	jit_type_t stack_swap_signature;
 
 	jit_type_t __rt_signature_2;
 	jit_type_t __rt_signature_20;

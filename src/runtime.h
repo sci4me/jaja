@@ -101,6 +101,8 @@ struct Stack {
 	Value* peek();
 	void set_top(Value v);
 
+	void dup();
+	void drop();
 	void swap();
 	void rot();
 };

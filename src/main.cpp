@@ -40,7 +40,7 @@ s32 main(s32 argc, char **argv) {
 	compiler.start();
 	auto main = compiler.compile(ast);
 	compiler.end();
-	delete parser_arena;
+	// delete parser_arena; // TODO
 
 	auto G = Scope(&heap);
 

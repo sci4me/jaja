@@ -39,6 +39,21 @@ Compiler::Compiler() {
 
 	{
 		jit_type_t params[] = { jit_type_void_ptr };
+		stack_dup_signature = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 1, 0);
+	}
+
+	{
+		jit_type_t params[] = { jit_type_void_ptr };
+		stack_drop_signature = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 1, 0);
+	}
+
+	{
+		jit_type_t params[] = { jit_type_void_ptr };
+		stack_swap_signature = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 1, 0);
+	}
+
+	{
+		jit_type_t params[] = { jit_type_void_ptr };
 		__rt_signature_2 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 1, 0);
 	}
 
@@ -115,8 +130,20 @@ Lambda Compiler::compile_raw(Array<Node*> *ast) {
 
 void Compiler::compile_lambda(jit_function_t j, Node *n) {
 	auto l = compile(&n->lambda);
-	
-	// TODO
+
+	auto value_size = jit_value_create_nint_constant(j, jit_type_int, sizeof(Value));
+	auto v = jit_insn_alloca(j, value_size);
+
+	auto a = jit_value_create_nint_constant(j, jit_type_void_ptr, 0);
+	jit_insn_store_relative(j, v, offsetof(Value, a), a);
+	auto type = jit_value_create_nint_constant(j, jit_type_ubyte, VALUE_LAMBDA);
+	jit_insn_store_relative(j, v, offsetof(Value, type), type);
+	auto _j = jit_value_create_long_constant(j, jit_type_void_ptr, (jit_long) l.lambda.j);
+	jit_insn_store_relative(j, v, offsetof(Value, lambda.j), _j);
+
+	auto stack = jit_value_get_param(j, 2);
+	jit_value_t args[] = { stack, v };
+	jit_insn_call_native_method(j, "Stack::push", &Stack::push, stack_push_signature, args, 2, JIT_CALL_NOTHROW);
 }
 
 #define XSTR(x) #x
@@ -180,15 +207,24 @@ void Compiler::compile_instruction(jit_function_t j, Node *n, Array<Node*> *ast,
 		case AST_OP_SET_PROP:
 			JIT_CALL_2(__rt_set_prop);
 			break;
-		case AST_OP_DUP:
-			assert(false);
+		case AST_OP_DUP: {
+			auto stack = jit_value_get_param(j, 2);
+			jit_value_t args[] = { stack };
+			jit_insn_call_native_method(j, "Stack::dup", &Stack::dup, stack_dup_signature, args, 1, JIT_CALL_NOTHROW);
 			break;
-		case AST_OP_DROP:
-			assert(false);
+		}
+		case AST_OP_DROP: {
+			auto stack = jit_value_get_param(j, 2);
+			jit_value_t args[] = { stack };
+			jit_insn_call_native_method(j, "Stack::drop", &Stack::drop, stack_drop_signature, args, 1, JIT_CALL_NOTHROW);
 			break;
-		case AST_OP_SWAP:
-			assert(false);
+		}
+		case AST_OP_SWAP: {
+			auto stack = jit_value_get_param(j, 2);
+			jit_value_t args[] = { stack };
+			jit_insn_call_native_method(j, "Stack::swap", &Stack::swap, stack_swap_signature, args, 1, JIT_CALL_NOTHROW);
 			break;
+		}
 		case AST_OP_ROT:
 			assert(false);
 			break;
@@ -248,13 +284,15 @@ void Compiler::compile_constant(jit_function_t j, Node *n) {
 		case NODE_STRING: {
 			auto type = jit_value_create_nint_constant(j, jit_type_ubyte, VALUE_STRING);
 			jit_insn_store_relative(j, v, offsetof(Value, type), type);
-			assert(false);
+			auto str = jit_value_create_long_constant(j, jit_type_void_ptr, (jit_long) n->string);
+			jit_insn_store_relative(j, v, offsetof(Value, string), str);
 			break;
 		}
 		case NODE_REFERENCE: {
 			auto type = jit_value_create_nint_constant(j, jit_type_ubyte, VALUE_REFERENCE);
 			jit_insn_store_relative(j, v, offsetof(Value, type), type);
-			assert(false);
+			auto str = jit_value_create_long_constant(j, jit_type_void_ptr, (jit_long) n->string);
+			jit_insn_store_relative(j, v, offsetof(Value, string), str);
 			break;
 		}
 		default:
@@ -264,5 +302,5 @@ void Compiler::compile_constant(jit_function_t j, Node *n) {
 
 	auto stack = jit_value_get_param(j, 2);
 	jit_value_t args[] = { stack, v };
-	jit_insn_call_native(j, "push", (void*)&Stack::push, stack_push_signature, args, 2, JIT_CALL_NOTHROW);
+	jit_insn_call_native_method(j, "Stack::push", &Stack::push, stack_push_signature, args, 2, JIT_CALL_NOTHROW);
 }

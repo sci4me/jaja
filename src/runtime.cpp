@@ -79,6 +79,15 @@ void Stack::set_top(Value v) {
 	if(v.a) heap->mark_root(v.a);
 }
 
+void Stack::dup() {
+	push(peek());
+}
+
+void Stack::drop() {
+	assert(data.count);
+	data.count--;
+}
+
 void Stack::swap() {
 	assert(data.count > 1);
 	auto x = data.data[data.count - 1];
@@ -157,9 +166,12 @@ static inline void call(Value v, Heap *heap, Scope *scope, Stack *stack) {
 
 	auto s = Scope(scope);
 
-	// (*v.lambda)(heap, &s, stack);
-	void *args[] = { heap, scope, stack };
-	jit_function_apply(v.lambda.j, args, 0);
+	if(v.type == VALUE_LAMBDA) {
+		auto c = (lambda_fn) jit_function_to_closure(v.lambda.j);
+		(*c)(heap, scope, stack);
+	} else {
+		(*v.native)(heap, scope, stack);
+	}
 
 	s.pop(heap);
 }
