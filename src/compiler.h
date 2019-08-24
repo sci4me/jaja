@@ -14,16 +14,9 @@
 struct Compiler {
 	jit_context_t ctx;
 
-	jit_type_t lambda_fn_signature;
-	jit_type_t stack_push_signature;
-	jit_type_t stack_dup_signature;
-	jit_type_t stack_drop_signature;
-	jit_type_t stack_swap_signature;
-
-	jit_type_t __rt_signature_2;
-	jit_type_t __rt_signature_20;
-	jit_type_t __rt_signature_21;
-	jit_type_t __rt_signature_012;
+	jit_type_t signature_void_void_ptr_1;
+	jit_type_t signature_void_void_ptr_2;
+	jit_type_t signature_void_void_ptr_3;
 
 	Compiler();
 	~Compiler();

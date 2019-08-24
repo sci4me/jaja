@@ -26,65 +26,29 @@ We'd need to know which variables  eed to be passed in from the caller and actua
 
 Compiler::Compiler() {
 	ctx = jit_context_create();
-	
+
 	{
-		jit_type_t params[] = { jit_type_void_ptr, jit_type_void_ptr, jit_type_void_ptr };
-		lambda_fn_signature = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 3, 10);
+		jit_type_t params[] = { jit_type_void_ptr };
+		signature_void_void_ptr_1 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 1, 0);
 	}
 
 	{
 		jit_type_t params[] = { jit_type_void_ptr, jit_type_void_ptr };
-		stack_push_signature = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 2, 0);
-	}
-
-	{
-		jit_type_t params[] = { jit_type_void_ptr };
-		stack_dup_signature = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 1, 0);
-	}
-
-	{
-		jit_type_t params[] = { jit_type_void_ptr };
-		stack_drop_signature = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 1, 0);
-	}
-
-	{
-		jit_type_t params[] = { jit_type_void_ptr };
-		stack_swap_signature = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 1, 0);
-	}
-
-	{
-		jit_type_t params[] = { jit_type_void_ptr };
-		__rt_signature_2 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 1, 0);
-	}
-
-	{
-		jit_type_t params[] = { jit_type_void_ptr, jit_type_void_ptr };
-		__rt_signature_20 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 2, 0);
-	}
-
-	{
-		jit_type_t params[] = { jit_type_void_ptr, jit_type_void_ptr };
-		__rt_signature_21 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 2, 0);
+		signature_void_void_ptr_2 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 2, 0);
 	}
 
 	{
 		jit_type_t params[] = { jit_type_void_ptr, jit_type_void_ptr, jit_type_void_ptr };
-		__rt_signature_012 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 3, 0);
+		signature_void_void_ptr_3 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 3, 0);
 	}
 }
 
 Compiler::~Compiler() {
 	jit_context_destroy(ctx);
 
-	jit_type_free(lambda_fn_signature);
-	jit_type_free(stack_push_signature);
-	jit_type_free(stack_dup_signature);
-	jit_type_free(stack_drop_signature);
-	jit_type_free(stack_swap_signature);
-	jit_type_free(__rt_signature_2);
-	jit_type_free(__rt_signature_20);
-	jit_type_free(__rt_signature_21);
-	jit_type_free(__rt_signature_012);
+	jit_type_free(signature_void_void_ptr_1);
+	jit_type_free(signature_void_void_ptr_2);
+	jit_type_free(signature_void_void_ptr_3);
 }
 
 void Compiler::start() {
@@ -106,7 +70,7 @@ Value Compiler::compile(Array<Node*> *ast) {
 Lambda Compiler::compile_raw(Array<Node*> *ast) {
 	Lambda result;
 
-	auto j = jit_function_create(ctx, lambda_fn_signature);
+	auto j = jit_function_create(ctx, signature_void_void_ptr_3);
 	result.j = j;
 
 	FOR(ast, i) {
@@ -153,16 +117,16 @@ void Compiler::compile_lambda(jit_function_t j, Node *n) {
 
 	auto stack = jit_value_get_param(j, 2);
 	jit_value_t args[] = { stack, v };
-	jit_insn_call_native_method(j, "Stack::push", &Stack::push, stack_push_signature, args, 2, JIT_CALL_NOTHROW);
+	jit_insn_call_native_method(j, "Stack::push", &Stack::push, signature_void_void_ptr_2, args, 2, JIT_CALL_NOTHROW);
 }
 
 #define XSTR(x) #x
 #define STR(x) XSTR(x)
 
-#define JIT_CALL_2(name) { auto stack = jit_value_get_param(j, 2); jit_value_t args[] = { stack }; jit_insn_call_native(j, STR(name), (void*)name, __rt_signature_2, args, 1, JIT_CALL_NOTHROW); }
-#define JIT_CALL_20(name) { auto stack = jit_value_get_param(j, 2); auto heap = jit_value_get_param(j, 0); jit_value_t args[] = { stack, heap }; jit_insn_call_native(j, STR(name), (void*)name, __rt_signature_20, args, 2, JIT_CALL_NOTHROW); }
-#define JIT_CALL_21(name) { auto stack = jit_value_get_param(j, 2); auto scope = jit_value_get_param(j, 1); jit_value_t args[] = { stack, scope }; jit_insn_call_native(j, STR(name), (void*)name, __rt_signature_21, args, 2, JIT_CALL_NOTHROW); }
-#define JIT_CALL_012(name) { auto heap = jit_value_get_param(j, 0); auto scope = jit_value_get_param(j, 1); auto stack = jit_value_get_param(j, 2); jit_value_t args[] = { heap, scope, stack }; jit_insn_call_native(j, STR(name), (void*)name, __rt_signature_012, args, 3, JIT_CALL_NOTHROW); }
+#define JIT_CALL_2(name) { auto stack = jit_value_get_param(j, 2); jit_value_t args[] = { stack }; jit_insn_call_native(j, STR(name), (void*)name, signature_void_void_ptr_1, args, 1, JIT_CALL_NOTHROW); }
+#define JIT_CALL_20(name) { auto stack = jit_value_get_param(j, 2); auto heap = jit_value_get_param(j, 0); jit_value_t args[] = { stack, heap }; jit_insn_call_native(j, STR(name), (void*)name, signature_void_void_ptr_2, args, 2, JIT_CALL_NOTHROW); }
+#define JIT_CALL_21(name) { auto stack = jit_value_get_param(j, 2); auto scope = jit_value_get_param(j, 1); jit_value_t args[] = { stack, scope }; jit_insn_call_native(j, STR(name), (void*)name, signature_void_void_ptr_2, args, 2, JIT_CALL_NOTHROW); }
+#define JIT_CALL_012(name) { auto heap = jit_value_get_param(j, 0); auto scope = jit_value_get_param(j, 1); auto stack = jit_value_get_param(j, 2); jit_value_t args[] = { heap, scope, stack }; jit_insn_call_native(j, STR(name), (void*)name, signature_void_void_ptr_3, args, 3, JIT_CALL_NOTHROW); }
 
 void Compiler::compile_instruction(jit_function_t j, Node *n, Array<Node*> *ast, u32 index) {
 	switch(n->op) {
@@ -220,24 +184,27 @@ void Compiler::compile_instruction(jit_function_t j, Node *n, Array<Node*> *ast,
 		case AST_OP_DUP: {
 			auto stack = jit_value_get_param(j, 2);
 			jit_value_t args[] = { stack };
-			jit_insn_call_native_method(j, "Stack::dup", &Stack::dup, stack_dup_signature, args, 1, JIT_CALL_NOTHROW);
+			jit_insn_call_native_method(j, "Stack::dup", &Stack::dup, signature_void_void_ptr_1, args, 1, JIT_CALL_NOTHROW);
 			break;
 		}
 		case AST_OP_DROP: {
 			auto stack = jit_value_get_param(j, 2);
 			jit_value_t args[] = { stack };
-			jit_insn_call_native_method(j, "Stack::drop", &Stack::drop, stack_drop_signature, args, 1, JIT_CALL_NOTHROW);
+			jit_insn_call_native_method(j, "Stack::drop", &Stack::drop, signature_void_void_ptr_1, args, 1, JIT_CALL_NOTHROW);
 			break;
 		}
 		case AST_OP_SWAP: {
 			auto stack = jit_value_get_param(j, 2);
 			jit_value_t args[] = { stack };
-			jit_insn_call_native_method(j, "Stack::swap", &Stack::swap, stack_swap_signature, args, 1, JIT_CALL_NOTHROW);
+			jit_insn_call_native_method(j, "Stack::swap", &Stack::swap, signature_void_void_ptr_1, args, 1, JIT_CALL_NOTHROW);
 			break;
 		}
-		case AST_OP_ROT:
-			assert(false);
+		case AST_OP_ROT: {
+			auto stack = jit_value_get_param(j, 2);
+			jit_value_t args[] = { stack };
+			jit_insn_call_native_method(j, "Stack::rot", &Stack::rot, signature_void_void_ptr_1, args, 1, JIT_CALL_NOTHROW);
 			break;
+		}
 		case AST_OP_LOAD:
 			JIT_CALL_21(__rt_load);
 			break;
@@ -314,5 +281,5 @@ void Compiler::compile_constant(jit_function_t j, Node *n) {
 
 	auto stack = jit_value_get_param(j, 2);
 	jit_value_t args[] = { stack, v };
-	jit_insn_call_native_method(j, "Stack::push", &Stack::push, stack_push_signature, args, 2, JIT_CALL_NOTHROW);
+	jit_insn_call_native_method(j, "Stack::push", &Stack::push, signature_void_void_ptr_2, args, 2, JIT_CALL_NOTHROW);
 }
