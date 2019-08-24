@@ -75,6 +75,16 @@ Compiler::Compiler() {
 
 Compiler::~Compiler() {
 	jit_context_destroy(ctx);
+
+	jit_type_free(lambda_fn_signature);
+	jit_type_free(stack_push_signature);
+	jit_type_free(stack_dup_signature);
+	jit_type_free(stack_drop_signature);
+	jit_type_free(stack_swap_signature);
+	jit_type_free(__rt_signature_2);
+	jit_type_free(__rt_signature_20);
+	jit_type_free(__rt_signature_21);
+	jit_type_free(__rt_signature_012);
 }
 
 void Compiler::start() {
@@ -121,7 +131,7 @@ Lambda Compiler::compile_raw(Array<Node*> *ast) {
 
 	jit_insn_return(j, 0);
 
-	jit_dump_function(stdout, j, 0);
+	// jit_dump_function(stdout, j, 0);
 	jit_function_compile(j);
 	// jit_dump_function(stdout, j, 0);
 
@@ -133,9 +143,9 @@ void Compiler::compile_lambda(jit_function_t j, Node *n) {
 
 	auto value_size = jit_value_create_nint_constant(j, jit_type_int, sizeof(Value));
 	auto v = jit_insn_alloca(j, value_size);
+	auto zero = jit_value_create_nint_constant(j, jit_type_ubyte, 0);
+	jit_insn_memset(j, v, zero, value_size);
 
-	auto a = jit_value_create_nint_constant(j, jit_type_void_ptr, 0);
-	jit_insn_store_relative(j, v, offsetof(Value, a), a);
 	auto type = jit_value_create_nint_constant(j, jit_type_ubyte, VALUE_LAMBDA);
 	jit_insn_store_relative(j, v, offsetof(Value, type), type);
 	auto _j = jit_value_create_long_constant(j, jit_type_void_ptr, (jit_long) l.lambda.j);
@@ -257,6 +267,8 @@ void Compiler::compile_instruction(jit_function_t j, Node *n, Array<Node*> *ast,
 void Compiler::compile_constant(jit_function_t j, Node *n) {
 	auto value_size = jit_value_create_nint_constant(j, jit_type_int, sizeof(Value));
 	auto v = jit_insn_alloca(j, value_size);
+	auto zero = jit_value_create_nint_constant(j, jit_type_ubyte, 0);
+	jit_insn_memset(j, v, zero, value_size);
 
 	switch(n->type) {
 		case NODE_TRUE: {

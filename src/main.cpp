@@ -71,5 +71,7 @@ s32 main(s32 argc, char **argv) {
 	}
 	*/
 
+	delete parser_arena;
+
 	return 0;
 }

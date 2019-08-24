@@ -21,6 +21,7 @@ bool Value::is_truthy() {
 	}
 
 	assert(false);
+	return false;
 }
 
 bool Value::operator==(const Value &other) {
