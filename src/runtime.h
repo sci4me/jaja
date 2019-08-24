@@ -1,6 +1,8 @@
 #ifndef RUNTIME_H
 #define RUNTIME_H
 
+#include <jit/jit.h>
+
 #include "hash_table.h"
 #include "array.h"
 
@@ -29,6 +31,10 @@ struct Stack;
 
 typedef void (* lambda_fn)(Heap*, Scope*, Stack*);
 
+struct Lambda {
+	jit_function_t j;
+};
+
 struct Value {
 	Allocation *a;
 
@@ -37,7 +43,8 @@ struct Value {
 		s64 number;
 		char *string;
 		Hash_Table<Value, Value> *object;
-		lambda_fn lambda;
+		lambda_fn native;
+		Lambda lambda;
 	};
 
 	Value() : a(0) {}
