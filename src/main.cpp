@@ -28,7 +28,7 @@ s32 main(s32 argc, char **argv) {
 	auto ast = p.parse();
 	free(source);
 
-	// optimize(parser_arena->as_allocator(), ast);
+	optimize(parser_arena->as_allocator(), ast);
 
 	// FOR(ast, i) {
 		// ast->data[i]->print_as_bytecode();

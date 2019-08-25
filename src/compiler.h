@@ -17,6 +17,9 @@ struct Compiler {
 	jit_type_t signature_void_void_ptr_1;
 	jit_type_t signature_void_void_ptr_2;
 	jit_type_t signature_void_void_ptr_3;
+	jit_type_t signature_ubyte_void_ptr_1;
+
+	Hash_Table<u64, jit_label_t> labels;
 
 	Compiler();
 	~Compiler();

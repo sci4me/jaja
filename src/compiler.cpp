@@ -24,7 +24,7 @@ We'd need to know which variables  eed to be passed in from the caller and actua
 
 */
 
-Compiler::Compiler() {
+Compiler::Compiler() : labels(Hash_Table<u64, jit_label_t>(hash_u64)) {
 	ctx = jit_context_create();
 
 	{
@@ -41,6 +41,11 @@ Compiler::Compiler() {
 		jit_type_t params[] = { jit_type_void_ptr, jit_type_void_ptr, jit_type_void_ptr };
 		signature_void_void_ptr_3 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 3, 0);
 	}
+
+	{
+		jit_type_t params[] = { jit_type_void_ptr };
+		signature_ubyte_void_ptr_1 = jit_type_create_signature(jit_abi_cdecl, jit_type_ubyte, params, 1, 0);
+	}
 }
 
 Compiler::~Compiler() {
@@ -49,6 +54,7 @@ Compiler::~Compiler() {
 	jit_type_free(signature_void_void_ptr_1);
 	jit_type_free(signature_void_void_ptr_2);
 	jit_type_free(signature_void_void_ptr_3);
+	jit_type_free(signature_ubyte_void_ptr_1);
 }
 
 void Compiler::start() {
@@ -95,7 +101,7 @@ Lambda Compiler::compile_raw(Array<Node*> *ast) {
 
 	jit_insn_return(j, 0);
 
-	// jit_dump_function(stdout, j, 0);
+	jit_dump_function(stdout, j, 0);
 	jit_function_compile(j);
 	// jit_dump_function(stdout, j, 0);
 
@@ -214,18 +220,46 @@ void Compiler::compile_instruction(jit_function_t j, Node *n, Array<Node*> *ast,
 		case AST_OP_WHILE:
 			JIT_CALL_012(__rt_while);
 			break;
-		case AST_OP_BRANCH:
-			assert(false);
+		case AST_OP_BRANCH: {
+			auto label = labels.get_or_else(n->label, jit_label_undefined);
+			jit_insn_branch(j, &label);
+			labels.put(n->label, label);
 			break;
+		}
 		case AST_OP_BRANCH_IF_FALSE:
-			assert(false);
+		case AST_OP_BRANCH_IF_TRUE: {
+			auto value_size = jit_value_create_nint_constant(j, jit_type_long, sizeof(Value));
+			auto v = jit_insn_alloca(j, value_size);
+
+			auto stack = jit_value_get_param(j, 2);
+
+			jit_value_t pop_into_args[] = { stack, v };
+			jit_insn_call_native_method(j, "Stack::pop_into", &Stack::pop_into, signature_void_void_ptr_2, pop_into_args, 2, JIT_CALL_NOTHROW);
+
+			jit_value_t is_truthy_args[] = { v };			
+			auto fptr = &Value::is_truthy;
+			auto result = jit_insn_call_native(j, "Value::is_truthy", reinterpret_cast<void*&>(fptr), signature_ubyte_void_ptr_1, is_truthy_args, 1, JIT_CALL_NOTHROW);
+
+			auto label = labels.get_or_else(n->label, jit_label_undefined);
+		
+			auto zero = jit_value_create_nint_constant(j, jit_type_ubyte, 0);
+			jit_value_t cond;
+			if(n->op == AST_OP_BRANCH_IF_FALSE) {
+				cond = jit_insn_eq(j, result, zero);
+			} else {
+				cond = jit_insn_ne(j, result, zero);
+			}
+			jit_insn_branch_if(j, cond, &label);
+
+			labels.put(n->label, label);
 			break;
-		case AST_OP_BRANCH_IF_TRUE:
-			assert(false);
+		}
+		case AST_OP_BRANCH_TARGET: {
+			auto label = labels.get_or_else(n->label, jit_label_undefined);
+			jit_insn_label(j, &label);
+			labels.put(n->label, label);
 			break;
-		case AST_OP_BRANCH_TARGET:
-			assert(false);
-			break;
+		}
 		default:
 			assert(false);
 	}
