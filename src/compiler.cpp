@@ -103,7 +103,7 @@ Lambda Compiler::compile_raw(Array<Node*> *ast) {
 
 	jit_dump_function(stdout, j, 0);
 	jit_function_compile(j);
-	// jit_dump_function(stdout, j, 0);
+	jit_dump_function(stdout, j, 0);
 
 	return result;
 }

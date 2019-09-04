@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "types.h"
 
@@ -13,7 +14,7 @@ char* read_entire_file(const char *path) {
 
 	char *data = (char*) calloc(size + 1, sizeof(char));
 	if(!data) return 0;
-	fread(data, sizeof(char), size, fp);
+	assert(fread(data, sizeof(char), size, fp) == size);
 
 	fclose(fp);
 
