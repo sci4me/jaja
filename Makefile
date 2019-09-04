@@ -1,19 +1,23 @@
+ifndef LIBJIT_DIR
+$(error LIBJIT_DIR is not set)
+endif
+
+LIBJIT_INCLUDE_PATH=$(LIBJIT_DIR)/include
+LIBJIT_AR=$(LIBJIT_DIR)/jit/.libs/libjit.a
+
 SRC_DIR=src
 TESTS_DIR=tests
-LIB_CODE_DIR=lib_code
-LIB_OBJS_DIR=lib_objs
 CC=g++
 
 SOURCES=$(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(SRC_DIR)/*/*.cpp) $(wildcard $(SRC_DIR)/*/*/*.cpp) $(wildcard $(SRC_DIR)/*/*/*/*.cpp) $(wildcard $(SRC_DIR)/*/*/*/*/*.cpp)
 OBJECTS=$(patsubst %.cpp,%.o,$(filter %.cpp,$(SOURCES)))
 TEST_SOURCES=$(wildcard $(TESTS_DIR)/*.cpp)
 TEST_OBJECTS=$(patsubst %.cpp,%.o,$(filter %.cpp,$(TEST_SOURCES)))
-EXTRA_OBJECTS=$(wildcard $(LIB_OBJS_DIR)/*.o)
 
 TEST_EXECUTABLE=jaja-tests
 
 EXECUTABLE=jaja
-LDFLAGS=
+LDFLAGS=-lpthread
 CXXFLAGS=
 
 .PHONY: all clean run
@@ -38,16 +42,16 @@ test: clean $(TEST_EXECUTABLE)
 	./$(TEST_EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(EXTRA_OBJECTS)
+	$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBJIT_AR)
 
 $(TEST_EXECUTABLE): tests/test_setup.cpp $(OBJECTS) $(TEST_OBJECTS) tests/test_setup.o
-	$(CC) $(LDFLAGS) -o $@ $(EXTRA_OBJECTS) $(filter-out $(SRC_DIR)/main.o,$(OBJECTS)) $(TEST_OBJECTS)
+	$(CC) $(LDFLAGS) -o $@ $(LIBJIT_AR) $(filter-out $(SRC_DIR)/main.o,$(OBJECTS)) $(TEST_OBJECTS)
 
 $(TESTS_DIR)/%.o: $(TESTS_DIR)/%.cpp
-	$(CC) $(CXXFLAGS) -I $(TESTS_DIR) -I $(LIB_CODE_DIR) -c -o "$@" "$<"
+	$(CC) $(CXXFLAGS) -I $(TESTS_DIR) -I $(LIBJIT_INCLUDE_PATH) -c -o "$@" "$<"
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CC) $(CXXFLAGS) -I $(SRC_DIR) -I $(LIB_CODE_DIR) -c -o "$@" "$<"
+	$(CC) $(CXXFLAGS) -I $(SRC_DIR) -I $(LIBJIT_INCLUDE_PATH) -c -o "$@" "$<"
 
 clean:
 	rm -f $(OBJECTS)

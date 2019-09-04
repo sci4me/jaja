@@ -184,6 +184,32 @@ _return_zero:
         return x;
     }
 
+    V get_or_else(K key, V x) {
+        u64 hash = 0;
+        u64 index = 0;
+
+        if(!keys) goto _return_zero;
+        if(count == 0) goto _return_zero;
+
+        hash = get_hash(key);
+        index = hash % size;
+
+        for(;;) {
+            index &= (size - 1);
+            if(hashes[index] == hash) {
+                if(eq_fn(keys[index], key)) {
+                    return values[index];
+                }
+            } else if(hashes[index] == HT_HASH_EMPTY) {
+                goto _return_zero;
+            }
+            index++;
+        }
+
+_return_zero:
+        return x;
+    }
+
     V* get_ptr(K key) {
         if(!keys) return 0;
         if(count == 0) return 0;
@@ -192,7 +218,6 @@ _return_zero:
         u64 index = hash % size;
 
         for(;;) {
-            // if(index >= size) index = 0;
             index &= (size - 1);
             if(hashes[index] == hash) {
                 if(eq_fn(keys[index], key)) {

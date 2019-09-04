@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "types.h"
 #include "utils.h"
@@ -8,7 +9,7 @@
 #include "arena.h"
 #include "optimizer.h"
 
-#define ADD_STD_FN(g, func, name) { Value v; v.a = 0; v.type = VALUE_NATIVE; v.lambda.fn = func; g.set((char*)name, &v); }
+#define ADD_STD_FN(g, func, name) { Value v; v.a = 0; v.type = VALUE_NATIVE; v.native = func; g.set((char*)name, &v); }
 
 s32 main(s32 argc, char **argv) {
 	if(argc != 2) {
@@ -36,9 +37,10 @@ s32 main(s32 argc, char **argv) {
 
 	auto heap = Heap();
 	auto compiler = Compiler();
-	
+	compiler.start();
 	auto main = compiler.compile(ast);
-	delete parser_arena;
+	compiler.end();
+	// delete parser_arena; // TODO
 
 	auto G = Scope(&heap);
 
@@ -47,7 +49,12 @@ s32 main(s32 argc, char **argv) {
 
 	auto stack = Stack(&heap);
 
-	(*main.lambda.fn)(&heap, &G, &stack);
+	// printf("%p %p %p\n", &heap, &G, &stack);
+
+	// (*main.lambda)(&heap, &G, &stack);
+
+	auto c = (lambda_fn) jit_function_to_closure(main.lambda.j);
+	(*c)(&heap, &G, &stack);
 
 	// just for fun
 	while(stack.data.count) stack.pop();
@@ -63,6 +70,8 @@ s32 main(s32 argc, char **argv) {
 		printf("root (%p) : %s@%s:%u\n", a, a->func, a->file, a->line);
 	}
 	*/
+
+	delete parser_arena;
 
 	return 0;
 }

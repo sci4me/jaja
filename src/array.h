@@ -126,6 +126,12 @@ struct Array {
 		data[count++] = value;
 	}
 
+	T* push_ref() {
+		ensure_capacity();
+
+		return &data[count++];
+	}
+
 	T pop() {
 		assert(count > 0);
 		auto v = data[count - 1];

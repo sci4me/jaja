@@ -21,6 +21,7 @@ bool Value::is_truthy() {
 	}
 
 	assert(false);
+	return false;
 }
 
 bool Value::operator==(const Value &other) {
@@ -77,6 +78,15 @@ void Stack::set_top(Value v) {
 	if(old.a) heap->unmark_root(old.a); 
 	data.data[data.count - 1] = v;
 	if(v.a) heap->mark_root(v.a);
+}
+
+void Stack::dup() {
+	push(peek());
+}
+
+void Stack::drop() {
+	assert(data.count);
+	data.count--;
 }
 
 void Stack::swap() {
@@ -157,7 +167,12 @@ static inline void call(Value v, Heap *heap, Scope *scope, Stack *stack) {
 
 	auto s = Scope(scope);
 
-	(*v.lambda.fn)(heap, &s, stack);
+	if(v.type == VALUE_LAMBDA) {
+		auto c = (lambda_fn) jit_function_to_closure(v.lambda.j);
+		(*c)(heap, scope, stack);
+	} else {
+		(*v.native)(heap, scope, stack);
+	}
 
 	s.pop(heap);
 }
@@ -414,12 +429,14 @@ void __rt_while(Heap *heap, Scope *scope, Stack *stack) {
 	assert(cond.type == VALUE_LAMBDA || cond.type == VALUE_NATIVE);
 
 	for(;;) {
-		(*cond.lambda.fn)(heap, scope, stack);
+		// (*cond.lambda)(heap, scope, stack);
+		call(cond, heap, scope, stack);
 
 		auto v = stack->pop();
 		if(!v.is_truthy()) break;
 
-		(*body.lambda.fn)(heap, scope, stack);
+		// (*body.lambda)(heap, scope, stack);
+		call(body, heap, scope, stack);
 	}
 }
 

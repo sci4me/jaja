@@ -1,20 +1,6 @@
 #include "compiler.h"
 
-#if defined(JIT_DEBUG) || defined(JIT_RALLOC_TRACKING) || defined(JIT_MAX_RALLOC_TRACKING)
-#include <stdio.h>
-#endif
-
-/*
-
-It seems to be the case that changing the JIT to generate code that does more of the work itself rather than calling out to a runtime function
-is causing the JIT to run MUCH more slowly, possibly exponentially more slowly. Why? We _REALLY_ need to figure this out. Even if we do end up
-having an interpreter as a first stage for run-once code, before the JIT, uh.... yeahhhh.... uh...
-We can't take hundreds of millis to compile a damn function. So. What's going on? Either I'm doing something dumb or myjit sucks or like...
-Idk. #FigureItOut @FutureSelf
-
-					- sci4me, Aug 17, 2019
-
-*/
+#include <jit/jit-dump.h>
 
 /*
 
@@ -23,63 +9,60 @@ We should allocate variables on the stack and write to them via that pointer whe
   read from that pointer when loading them.
 Challenge: what if we want to access a variable in a scope about ours? How do we facilitate that?
   It's tricky because we can't use registers because a, that's not what they're meant to be used for, b, the data
-  wouldn't fit, and c, each function has its own register set.
-We need to like, know which variables need to be passed as parameters or something
+  wouldn't fit, and c, each functi n has its own register set.
+We need to like, know which variab es need to be passed as parameters or something
 But we can't just do that right?
 Hmmmhmhmmhmh
 
 Yeah it's surprisingly tricky.
 
-We'd need to know which variables need to be passed in from the caller and actually pass them in whenever
-  we call that lambda. Can we do this? We may have to resort to a multi-pass system where we first compute scoping
+We'd need to know which variables  eed to be passed in from the caller and actually pass them in whenever
+  we call that lambda. Can we do t is? We may have to resort to a multi-pass system where we first compute scoping
   information and then generate code using it...?
 
 					- sci4me, Aug 19, 2019
 
 */
 
+Compiler::Compiler() : labels(Hash_Table<u64, jit_label_t>(hash_u64)) {
+	ctx = jit_context_create();
+
+	{
+		jit_type_t params[] = { jit_type_void_ptr };
+		signature_void_void_ptr_1 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 1, 0);
+	}
+
+	{
+		jit_type_t params[] = { jit_type_void_ptr, jit_type_void_ptr };
+		signature_void_void_ptr_2 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 2, 0);
+	}
+
+	{
+		jit_type_t params[] = { jit_type_void_ptr, jit_type_void_ptr, jit_type_void_ptr };
+		signature_void_void_ptr_3 = jit_type_create_signature(jit_abi_cdecl, jit_type_void, params, 3, 0);
+	}
+
+	{
+		jit_type_t params[] = { jit_type_void_ptr };
+		signature_ubyte_void_ptr_1 = jit_type_create_signature(jit_abi_cdecl, jit_type_ubyte, params, 1, 0);
+	}
+}
+
 Compiler::~Compiler() {
-	FOR((&jits), i) {
-		// TODO: how can we do this better? surely we don't have to hold on to _all_ code forever?
-		// there's always the option of deoptimization, or something like it, but doing that without saving the IR will be 
-		// probably essentially impossible lmfao
-		jit_free(jits.data[i]);
-	}
+	jit_context_destroy(ctx);
+
+	jit_type_free(signature_void_void_ptr_1);
+	jit_type_free(signature_void_void_ptr_2);
+	jit_type_free(signature_void_void_ptr_3);
+	jit_type_free(signature_ubyte_void_ptr_1);
 }
 
-#ifdef JIT_RALLOC_TRACKING
-jit_value Compiler::ralloc(const char *func, const char *file, u32 line) {
-#else
-jit_value Compiler::ralloc() {
-#endif
-	u64 n = registers->next_clear();
-	registers->set(n);
-#ifdef JIT_RALLOC_TRACKING
-	allocations->put(n, {
-		.func = func,
-		.file = file,
-		.line = line
-	});
-#endif
-#ifdef JIT_MAX_RALLOC_TRACKING
-	if(n > max_rallocs) {
-		max_rallocs = n;
-	}
-#endif
-	return R(n);
+void Compiler::start() {
+	jit_context_build_start(ctx);
 }
 
-void Compiler::rfree(jit_value r) {
-	jit_reg x;
-	memcpy(&x, &r, sizeof(jit_reg));
-	auto n = (u64) x.id;
-
-	assert(registers->get(n));
-	registers->clear(n);
-
-#ifdef JIT_RALLOC_TRACKING
-	allocations->remove(n);
-#endif
+void Compiler::end() {
+	jit_context_build_end(ctx);
 }
 
 Value Compiler::compile(Array<Node*> *ast) {
@@ -91,42 +74,10 @@ Value Compiler::compile(Array<Node*> *ast) {
 }
 
 Lambda Compiler::compile_raw(Array<Node*> *ast) {
-	registersStack.push(registers);
-	registers = new Bitset();
-
-#ifdef JIT_RALLOC_TRACKING
-	allocationsStack.push(allocations);
-	allocations = new Hash_Table<u64, RAllocation>(hash_u64);
-#endif
-#ifdef JIT_MAX_RALLOC_TRACKING
-	max_rallocs_stack.push(max_rallocs);
-	max_rallocs = 0;
-#endif
-
-	registers->set(0);
-	registers->set(1);
-	registers->set(2);
-
 	Lambda result;
 
-	auto j = jit_init();
-	jits.push(j);	
+	auto j = jit_function_create(ctx, signature_void_void_ptr_3);
 	result.j = j;
-
-#ifdef JIT_DEBUG
-	jit_comment(j, ">>>");
-#endif
-
-	jit_enable_optimization(j, JIT_OPT_ALL);
-	
-	jit_prolog(j, &result.fn);
-	jit_declare_arg(j, JIT_PTR, sizeof(Heap*));
-	jit_declare_arg(j, JIT_PTR, sizeof(Scope*));
-	jit_declare_arg(j, JIT_PTR, sizeof(Stack*));
-
-	jit_getarg(j, R_HEAP, 0);
-	jit_getarg(j, R_SCOPE, 1);
-	jit_getarg(j, R_STACK, 2);
 
 	FOR(ast, i) {
 		auto node = ast->data[i];
@@ -148,537 +99,165 @@ Lambda Compiler::compile_raw(Array<Node*> *ast) {
 		}
 	}
 
-	jit_reti(j, 0);
+	jit_insn_return(j, 0);
 
-#ifdef JIT_DEBUG
-	jit_comment(j, "<<<");
-	jit_check_code(j, JIT_WARN_ALL);
-#endif
-
-	jit_generate_code(j);
-
-#ifdef JIT_DEBUG	
-	printf("ops {\n");
-	jit_dump_ops(j, JIT_DEBUG_OPS);
-	printf("}\n");
-#endif
-
-	registers->clear(0);
-	registers->clear(1);
-	registers->clear(2);
-
-#ifdef JIT_RALLOC_TRACKING
-	if(registers->bits_set()) {
-		for(u32 i = 0; i < allocations->size; i++) {
-			if(HT_HASH_IS_OCCUPIED(allocations->hashes[i])) {
-				auto a = allocations->values[i];
-				printf("ralloc (%u) : %s@%s:%u\n", allocations->keys[i], a.func, a.file, a.line);
-			}
-		}
-		fflush(stdout);
-		assert(false);
-	}
-#endif
-#ifdef JIT_MAX_RALLOC_TRACKING
-	printf("max_rallocs: %u\n", max_rallocs);
-	max_rallocs = max_rallocs_stack.pop();
-#endif
-
-	delete registers;
-	registers = registersStack.pop();
-
-#ifdef JIT_RALLOC_TRACKING
-	delete allocations;
-	allocations = allocationsStack.pop();
-#endif
+	jit_dump_function(stdout, j, 0);
+	jit_function_compile(j);
+	jit_dump_function(stdout, j, 0);
 
 	return result;
 }
 
-void Compiler::compile_lambda(jit *j, Node *n) {
-#ifdef JIT_DEBUG
-	jit_comment(j, "__rt_push_lambda");
-#endif
-
+void Compiler::compile_lambda(jit_function_t j, Node *n) {
 	auto l = compile(&n->lambda);
 
-	auto lambda = RALLOC();
-	jit_addi(j, lambda, R_FP, jit_allocai(j, sizeof(Value)));
+	auto value_size = jit_value_create_nint_constant(j, jit_type_int, sizeof(Value));
+	auto v = jit_insn_alloca(j, value_size);
+	auto zero = jit_value_create_nint_constant(j, jit_type_ubyte, 0);
+	jit_insn_memset(j, v, zero, value_size);
 
-	auto tmp = RALLOC();
-	jit_movi(j, tmp, 0);
-	jit_stxi(j, offsetof(Value, a), lambda, tmp, sizeof(Value::a));
-	jit_movi(j, tmp, VALUE_LAMBDA);
-	jit_stxi(j, offsetof(Value, type), lambda, tmp, sizeof(Value::type));
-	jit_movi(j, tmp, l.lambda.j);
-	jit_stxi(j, offsetof(Value, lambda.j), lambda, tmp, sizeof(Value::lambda.j));
-	jit_movi(j, tmp, l.lambda.fn);
-	jit_stxi(j, offsetof(Value, lambda.fn), lambda, tmp, sizeof(Value::lambda.fn));
+	auto type = jit_value_create_nint_constant(j, jit_type_ubyte, VALUE_LAMBDA);
+	jit_insn_store_relative(j, v, offsetof(Value, type), type);
+	auto _j = jit_value_create_long_constant(j, jit_type_void_ptr, (jit_long) l.lambda.j);
+	jit_insn_store_relative(j, v, offsetof(Value, lambda.j), _j);
 
-	jit_prepare(j);
-	jit_putargr(j, R_STACK);
-	jit_putargr(j, lambda);
-	jit_call_method(j, &Stack::push);
-	
-	RFREE(lambda);
-	RFREE(tmp);
-
-/*
-#ifdef HEAP_DEBUG
-	auto lambda = RALLOC(); auto LINE = __LINE__;
-	auto rz = RALLOC();
-
-	jit_movi(j, rz, 0);
-	jit_prepare(j);
-	jit_putargr(j, R_HEAP);
-	jit_putargi(j, LINE);
-	jit_putargi(j, __func__);
-	jit_putargi(j, __FILE__);
-	jit_call_method(j, &Heap::alloc);
-	jit_retval(j, lambda);
-
-	RFREE(rz);
-#else
-	auto lambda = RALLOC();
-
-	jit_prepare(j);
-	jit_putargr(j, R_HEAP);
-	jit_call_method(j, &Heap::alloc);
-	jit_retval(j, lambda);
-#endif
-
-	auto tmp = RALLOC();
-	jit_movi(j, tmp, VALUE_LAMBDA);
-	jit_stxi(j, offsetof(Value, type), lambda, tmp, sizeof(Value::type));
-	jit_movi(j, tmp, l.j);
-	jit_stxi(j, offsetof(Value, lambda.j), lambda, tmp, sizeof(Value::lambda.j));
-	jit_movi(j, tmp, l.fn);
-	jit_stxi(j, offsetof(Value, lambda.fn), lambda, tmp, sizeof(Value::lambda.fn));
-
-	jit_prepare(j);
-	jit_putargr(j, R_STACK);
-	jit_putargr(j, lambda);
-	jit_call_method(j, &Stack::push);
-
-	RFREE(lambda);
-	RFREE(tmp);
-*/
+	auto stack = jit_value_get_param(j, 2);
+	jit_value_t args[] = { stack, v };
+	jit_insn_call_native_method(j, "Stack::push", &Stack::push, signature_void_void_ptr_2, args, 2, JIT_CALL_NOTHROW);
 }
 
-#ifdef JIT_DEBUG
-	#define xstr(x) #x
-	#define str(x) xstr(x)
+#define XSTR(x) #x
+#define STR(x) XSTR(x)
 
-	#define JIT_RT_CALL_2(fn) jit_comment(j, str(fn) "\n"); jit_prepare(j); jit_putargr(j, R_STACK); jit_call(j, fn);
-	#define JIT_RT_CALL_20(fn) jit_comment(j, str(fn) "\n"); jit_prepare(j); jit_putargr(j, R_STACK); jit_putargr(j, R_HEAP); jit_call(j, fn);
-	#define JIT_RT_CALL_21(fn) jit_comment(j, str(fn) "\n"); jit_prepare(j); jit_putargr(j, R_STACK); jit_putargr(j, R_SCOPE); jit_call(j, fn);
-	#define JIT_RT_CALL_012(fn) jit_comment(j, str(fn) "\n"); jit_prepare(j); jit_putargr(j, R_HEAP); jit_putargr(j, R_SCOPE); jit_putargr(j, R_STACK); jit_call(j, fn);
-#else
-	#define JIT_RT_CALL_2(fn) jit_prepare(j); jit_putargr(j, R_STACK); jit_call(j, fn);
-	#define JIT_RT_CALL_20(fn) jit_prepare(j); jit_putargr(j, R_STACK); jit_putargr(j, R_HEAP); jit_call(j, fn);
-	#define JIT_RT_CALL_21(fn) jit_prepare(j); jit_putargr(j, R_STACK); jit_putargr(j, R_SCOPE); jit_call(j, fn);
-	#define JIT_RT_CALL_012(fn) jit_prepare(j); jit_putargr(j, R_HEAP); jit_putargr(j, R_SCOPE); jit_putargr(j, R_STACK); jit_call(j, fn);
-#endif
+#define JIT_CALL_2(name) { auto stack = jit_value_get_param(j, 2); jit_value_t args[] = { stack }; jit_insn_call_native(j, STR(name), (void*)name, signature_void_void_ptr_1, args, 1, JIT_CALL_NOTHROW); }
+#define JIT_CALL_20(name) { auto stack = jit_value_get_param(j, 2); auto heap = jit_value_get_param(j, 0); jit_value_t args[] = { stack, heap }; jit_insn_call_native(j, STR(name), (void*)name, signature_void_void_ptr_2, args, 2, JIT_CALL_NOTHROW); }
+#define JIT_CALL_21(name) { auto stack = jit_value_get_param(j, 2); auto scope = jit_value_get_param(j, 1); jit_value_t args[] = { stack, scope }; jit_insn_call_native(j, STR(name), (void*)name, signature_void_void_ptr_2, args, 2, JIT_CALL_NOTHROW); }
+#define JIT_CALL_012(name) { auto heap = jit_value_get_param(j, 0); auto scope = jit_value_get_param(j, 1); auto stack = jit_value_get_param(j, 2); jit_value_t args[] = { heap, scope, stack }; jit_insn_call_native(j, STR(name), (void*)name, signature_void_void_ptr_3, args, 3, JIT_CALL_NOTHROW); }
 
-#include <stdio.h>
-
-void Compiler::compile_instruction(jit *j, Node *n, Array<Node*> *ast, u32 index) {
+void Compiler::compile_instruction(jit_function_t j, Node *n, Array<Node*> *ast, u32 index) {
 	switch(n->op) {
 		case AST_OP_EQ:
-			JIT_RT_CALL_2(__rt_eq);
+			JIT_CALL_2(__rt_eq);
 			break;
 		case AST_OP_LT:
-			JIT_RT_CALL_2(__rt_lt);
+			JIT_CALL_2(__rt_lt);
 			break;
 		case AST_OP_GT:
-			JIT_RT_CALL_2(__rt_gt);
+			JIT_CALL_2(__rt_gt);
 			break;
 		case AST_OP_COND_EXEC:
-			JIT_RT_CALL_012(__rt_cond_exec);
+			JIT_CALL_012(__rt_cond_exec);
 			break;
 		case AST_OP_EXEC:
-			JIT_RT_CALL_012(__rt_exec);
+			JIT_CALL_012(__rt_exec);
 			break;
 		case AST_OP_AND:
-			JIT_RT_CALL_2(__rt_and);
+			JIT_CALL_2(__rt_and);
 			break;
 		case AST_OP_OR:
-			JIT_RT_CALL_2(__rt_or);
+			JIT_CALL_2(__rt_or);
 			break;
-		case AST_OP_NOT: {
-			JIT_RT_CALL_2(__rt_not);
-/*
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_not");
-#endif
-			auto x = RALLOC();
-			auto type = RALLOC();
-			auto tmp = RALLOC();
-		
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_call_method(j, &Stack::peek);
-			jit_retval(j, x);
-
-			jit_ldxi(j, type, x, offsetof(Value, type), sizeof(Value::type));
-
-			auto l1 = jit_bnei(j, 0, type, VALUE_TRUE);
-				jit_movi(j, tmp, VALUE_FALSE);
-				jit_stxi(j, offsetof(Value, type), x, tmp, sizeof(Value::type));
-			auto j1 = jit_jmpi(j, JIT_FORWARD);
-			jit_patch(j, l1);
-			auto l2 = jit_bnei(j, 0, type, VALUE_FALSE);
-				jit_movi(j, tmp, VALUE_TRUE);
-				jit_stxi(j, offsetof(Value, type), x, tmp, sizeof(Value::type));
-			auto j2 = jit_jmpi(j, JIT_FORWARD);
-			jit_patch(j, l2);
-#ifndef NDEBUG
-			jit_prepare(j);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_call(j, __assert_fail);
-#endif
-			jit_patch(j, j1);
-			jit_patch(j, j2);
-
-			RFREE(x);
-			RFREE(type);
-			RFREE(tmp);
-*/
+		case AST_OP_NOT:
+			JIT_CALL_2(__rt_not);
 			break;
-		}
 		case AST_OP_ADD:
-			JIT_RT_CALL_2(__rt_add);
+			JIT_CALL_2(__rt_add);
 			break;
 		case AST_OP_SUB:
-			JIT_RT_CALL_2(__rt_sub);
+			JIT_CALL_2(__rt_sub);
 			break;
 		case AST_OP_MUL:
-			JIT_RT_CALL_2(__rt_mul);
+			JIT_CALL_2(__rt_mul);
 			break;
 		case AST_OP_DIV:
-			JIT_RT_CALL_2(__rt_div);
+			JIT_CALL_2(__rt_div);
 			break;
 		case AST_OP_NEG:
-			JIT_RT_CALL_2(__rt_neg);
+			JIT_CALL_2(__rt_neg);
 			break;
 		case AST_OP_MOD:
-			JIT_RT_CALL_2(__rt_mod);
+			JIT_CALL_2(__rt_mod);
 			break;
 		case AST_OP_NEW_OBJECT:
-			JIT_RT_CALL_20(__rt_newobj);
+			JIT_CALL_20(__rt_newobj);
 			break;
 		case AST_OP_GET_PROP:
-			JIT_RT_CALL_2(__rt_get_prop);
+			JIT_CALL_2(__rt_get_prop);
 			break;
-		case AST_OP_SET_PROP: {
-			JIT_RT_CALL_2(__rt_set_prop);
-			/*
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_set_prop");
-#endif
-
-			auto value = RALLOC();
-			auto key = RALLOC();
-			auto object = RALLOC();
-
-			jit_addi(j, value, R_FP, jit_allocai(j, sizeof(Value)));
-			jit_addi(j, key, R_FP, jit_allocai(j, sizeof(Value)));
-			jit_addi(j, object, R_FP, jit_allocai(j, sizeof(Value)));
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, value);
-			jit_call_method(j, &Stack::pop_into);
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, key);
-			jit_call_method(j, &Stack::pop_into);
-			
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, object);
-			jit_call_method(j, &Stack::pop_into);
-
-#ifndef NDEBUG
-			auto type = RALLOC();
-			jit_ldxi(j, type, object, offsetof(Value, type), sizeof(Value::type));
-
-			auto l = jit_beqi(j, 0, type, VALUE_OBJECT);
-			jit_prepare(j);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_call(j, __assert_fail);
-			jit_patch(j, l);
-			
-			RFREE(type);
-#endif
-
-			auto _object = RALLOC();
-			jit_ldxi(j, _object, object, offsetof(Value, object), sizeof(Value::object));
-
-			jit_prepare(j);
-			jit_putargr(j, _object);
-			jit_putargr(j, key);			
-			jit_putargr(j, value);
-			auto x = &Hash_Table<Value, Value>::put_by_ptr;
-			jit_call_method(j, x);	
-
-			RFREE(value);
-			RFREE(key);
-			RFREE(object);
-			RFREE(_object);
-			*/		
+		case AST_OP_SET_PROP:
+			JIT_CALL_2(__rt_set_prop);
 			break;
-		}
 		case AST_OP_DUP: {
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_dup");
-#endif
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_call_method(j, &Stack::peek);
-			auto tos = RALLOC();
-			jit_retval(j, tos);
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, tos);
-			jit_call_method(j, &Stack::push);
-			RFREE(tos);
+			auto stack = jit_value_get_param(j, 2);
+			jit_value_t args[] = { stack };
+			jit_insn_call_native_method(j, "Stack::dup", &Stack::dup, signature_void_void_ptr_1, args, 1, JIT_CALL_NOTHROW);
 			break;
 		}
 		case AST_OP_DROP: {
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_drop");
-#endif
-			auto data = RALLOC();
-			jit_addi(j, data, R_STACK, offsetof(Stack, data));
-			jit_prepare(j);
-			jit_putargr(j, data);
-			jit_call_method(j, &Array<Value>::drop);
-			RFREE(data);
+			auto stack = jit_value_get_param(j, 2);
+			jit_value_t args[] = { stack };
+			jit_insn_call_native_method(j, "Stack::drop", &Stack::drop, signature_void_void_ptr_1, args, 1, JIT_CALL_NOTHROW);
 			break;
 		}
-		case AST_OP_SWAP:
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_swap");
-#endif
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_call_method(j, &Stack::swap);
-			break;
-		case AST_OP_ROT:
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_rot");
-#endif
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_call_method(j, &Stack::rot);
-			break;
-		case AST_OP_LOAD: {
-			JIT_RT_CALL_21(__rt_load);
-			/*
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_load");
-#endif
-			auto key = RALLOC();
-			jit_addi(j, key, R_FP, jit_allocai(j, sizeof(Value)));
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, key);
-			jit_call_method(j, &Stack::pop_into);
-
-#ifndef NDEBUG
-			auto type = RALLOC();
-			jit_ldxi(j, type, key, offsetof(Value, type), sizeof(Value::type));
-
-			auto l = jit_beqi(j, 0, type, VALUE_REFERENCE);
-			jit_prepare(j);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_call(j, __assert_fail);
-			jit_patch(j, l);
-			RFREE(type);
-#endif
-
-			auto string = RALLOC();
-			jit_ldxi(j, string, key, offsetof(Value, string), sizeof(Value::string));
-
-			jit_prepare(j);
-			jit_putargr(j, R_SCOPE);
-			jit_putargr(j, string);
-			jit_call_method(j, &Scope::get); // @Volatile
-			auto result = RALLOC();
-			jit_retval(j, result);
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, result);
-			jit_call_method(j, &Stack::push);
-
-			RFREE(key);
-			RFREE(string);
-			RFREE(result);
-			*/
+		case AST_OP_SWAP: {
+			auto stack = jit_value_get_param(j, 2);
+			jit_value_t args[] = { stack };
+			jit_insn_call_native_method(j, "Stack::swap", &Stack::swap, signature_void_void_ptr_1, args, 1, JIT_CALL_NOTHROW);
 			break;
 		}
-		case AST_OP_STORE: {
-			JIT_RT_CALL_012(__rt_store);
-			/*
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_store");
-#endif
-
-			auto key = RALLOC();
-			auto value = RALLOC();
-			jit_addi(j, key, R_FP, jit_allocai(j, sizeof(Value)));
-			jit_addi(j, value, R_FP, jit_allocai(j, sizeof(Value)));
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, key);
-			jit_call_method(j, &Stack::pop_into);
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, value);
-			jit_call_method(j, &Stack::pop_into);			
-
-#ifndef NDEBUG
-			auto type = RALLOC();
-			jit_ldxi(j, type, key, offsetof(Value, type), sizeof(Value::type));
-
-			auto l = jit_beqi(j, 0, type, VALUE_REFERENCE);
-			jit_prepare(j);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_putargi(j, 0);
-			jit_call(j, __assert_fail);
-			jit_patch(j, l);
-			
-			RFREE(type);
-#endif	
-
-			auto string = RALLOC();
-			jit_ldxi(j, string, key, offsetof(Value, string), sizeof(Value::string));
-
-			jit_prepare(j);
-			jit_putargr(j, R_SCOPE);
-			jit_putargr(j, string);
-			jit_putargr(j, value);
-			jit_call_method(j, &Scope::set);
-
-			RFREE(key);
-			RFREE(value);
-			RFREE(string);
-			*/
+		case AST_OP_ROT: {
+			auto stack = jit_value_get_param(j, 2);
+			jit_value_t args[] = { stack };
+			jit_insn_call_native_method(j, "Stack::rot", &Stack::rot, signature_void_void_ptr_1, args, 1, JIT_CALL_NOTHROW);
 			break;
 		}
+		case AST_OP_LOAD:
+			JIT_CALL_21(__rt_load);
+			break;
+		case AST_OP_STORE:
+			JIT_CALL_012(__rt_store);
+			break;
 		case AST_OP_WHILE:
-			JIT_RT_CALL_012(__rt_while);
+			JIT_CALL_012(__rt_while);
 			break;
 		case AST_OP_BRANCH: {
-			// This is dumb as hecc; we have to scan to figure out whether we're branching forward or backward.
-			// Because myjit sucks.
-			// 					- sci4me, Aug 21, 2019
-
-			bool reverse = false;
-			u32 reverse_label = 0;
-			for(u32 i = 0; i < index; i++) {
-				auto x = ast->data[i];
-				if(x->type == NODE_INSTRUCTION && x->op == AST_OP_BRANCH_TARGET && x->label == n->label) {
-					reverse = true;
-					reverse_label = n->label;
-					break;
-				} 
-			}
-
-			if(reverse) {
-				auto x = reverse_labels.get(reverse_label);
-				jit_jmpi(j, x);
-			} else {
-				auto op = jit_jmpi(j, 0);
-				labels.put(n->label, op);
-			}
+			auto label = labels.get_or_else(n->label, jit_label_undefined);
+			jit_insn_branch(j, &label);
+			labels.put(n->label, label);
 			break;
 		}
 		case AST_OP_BRANCH_IF_FALSE:
 		case AST_OP_BRANCH_IF_TRUE: {
-			bool reverse = false;
-			u32 reverse_label = 0;
-			for(u32 i = 0; i < index; i++) {
-				auto x = ast->data[i];
-				if(x->type == NODE_INSTRUCTION && x->op == AST_OP_BRANCH_TARGET && x->label == n->label) {
-					reverse = true;
-					reverse_label = n->label;
-					break;
-				} 
-			}
+			auto value_size = jit_value_create_nint_constant(j, jit_type_long, sizeof(Value));
+			auto v = jit_insn_alloca(j, value_size);
 
-			auto value = RALLOC();
-			jit_addi(j, value, R_FP, jit_allocai(j, sizeof(Value)));
-			
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, value);
-			jit_call_method(j, &Stack::pop_into);
+			auto stack = jit_value_get_param(j, 2);
 
-			jit_prepare(j);
-			jit_putargr(j, value);
-			jit_call_method(j, &Value::is_truthy);
-			auto cond = RALLOC();
-			jit_retval(j, cond);
+			jit_value_t pop_into_args[] = { stack, v };
+			jit_insn_call_native_method(j, "Stack::pop_into", &Stack::pop_into, signature_void_void_ptr_2, pop_into_args, 2, JIT_CALL_NOTHROW);
 
-			if(reverse) {
-				auto x = reverse_labels.get(reverse_label);
-				if(n->op == AST_OP_BRANCH_IF_FALSE) {
-					jit_beqi(j, x, cond, 0);
-				} else {
-					jit_bnei(j, (jit_value)x, cond, 0);
-				}
+			jit_value_t is_truthy_args[] = { v };			
+			auto fptr = &Value::is_truthy;
+			auto result = jit_insn_call_native(j, "Value::is_truthy", reinterpret_cast<void*&>(fptr), signature_ubyte_void_ptr_1, is_truthy_args, 1, JIT_CALL_NOTHROW);
+
+			auto label = labels.get_or_else(n->label, jit_label_undefined);
+		
+			auto zero = jit_value_create_nint_constant(j, jit_type_ubyte, 0);
+			jit_value_t cond;
+			if(n->op == AST_OP_BRANCH_IF_FALSE) {
+				cond = jit_insn_eq(j, result, zero);
 			} else {
-				jit_op *op;
-
-				if(n->op == AST_OP_BRANCH_IF_FALSE) {
-					op = jit_beqi(j, 0, cond, 0);
-				} else {
-					op = jit_bnei(j, 0, cond, 0);
-				}
-
-				labels.put(n->label, op);
+				cond = jit_insn_ne(j, result, zero);
 			}
+			jit_insn_branch_if(j, cond, &label);
 
-			RFREE(value);
-			RFREE(cond);
+			labels.put(n->label, label);
 			break;
 		}
 		case AST_OP_BRANCH_TARGET: {
-			bool reverse = true;
-			for(u32 i = 0; i < index; i++) {
-				auto x = ast->data[i];
-				if(x->type == NODE_INSTRUCTION && (x->op == AST_OP_BRANCH || x->op == AST_OP_BRANCH_IF_TRUE || x->op == AST_OP_BRANCH_IF_FALSE) && x->label == n->label) {
-					reverse = false;
-					break;
-				} 
-			}
-
-			if(reverse) {
-				reverse_labels.put(n->label, jit_get_label(j));
-			} else {
-				auto x = labels.get(n->label);
-				assert(x);
-				jit_patch(j, x);
-			}
+			auto label = labels.get_or_else(n->label, jit_label_undefined);
+			jit_insn_label(j, &label);
+			labels.put(n->label, label);
 			break;
 		}
 		default:
@@ -686,166 +265,55 @@ void Compiler::compile_instruction(jit *j, Node *n, Array<Node*> *ast, u32 index
 	}
 }
 
-void Compiler::compile_constant(jit *j, Node *n) {
+void Compiler::compile_constant(jit_function_t j, Node *n) {
+	auto value_size = jit_value_create_nint_constant(j, jit_type_int, sizeof(Value));
+	auto v = jit_insn_alloca(j, value_size);
+	auto zero = jit_value_create_nint_constant(j, jit_type_ubyte, 0);
+	jit_insn_memset(j, v, zero, value_size);
+
 	switch(n->type) {
 		case NODE_TRUE: {
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_push_true");
-#endif
-			auto v = RALLOC();
-			jit_addi(j, v, R_FP, jit_allocai(j, sizeof(Value)));
-			auto tmp = RALLOC();
-			jit_movi(j, tmp, 0);
-			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
-			jit_movi(j, tmp, VALUE_TRUE);
-			jit_stxi(j, offsetof(Value, type), v, tmp, sizeof(Value::type));
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, v);
-			jit_call_method(j, &Stack::push);
-
-			RFREE(v);
-			RFREE(tmp);
+			auto type = jit_value_create_nint_constant(j, jit_type_ubyte, VALUE_TRUE);
+			jit_insn_store_relative(j, v, offsetof(Value, type), type);
 			break;
 		}
 		case NODE_FALSE: {
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_push_false");
-#endif
-			auto i = jit_allocai(j, sizeof(Value));
-
-			auto v = RALLOC();
-			jit_addi(j, v, R_FP, i);
-			auto tmp = RALLOC();
-			jit_movi(j, tmp, 0);
-			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
-			jit_movi(j, tmp, VALUE_FALSE);
-			jit_stxi(j, offsetof(Value, type), v, tmp, sizeof(Value::type));
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, v);
-			jit_call_method(j, &Stack::push);
-
-			RFREE(v);
-			RFREE(tmp);
+			auto type = jit_value_create_nint_constant(j, jit_type_ubyte, VALUE_FALSE);
+			jit_insn_store_relative(j, v, offsetof(Value, type), type);
 			break;
 		}
 		case NODE_NIL: {
-			#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_push_nil");
-#endif
-			auto i = jit_allocai(j, sizeof(Value));
-
-			auto v = RALLOC();
-			jit_addi(j, v, R_FP, i);
-			auto tmp = RALLOC();
-			jit_movi(j, tmp, 0);
-			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
-			jit_movi(j, tmp, VALUE_NIL);
-			jit_stxi(j, offsetof(Value, type), v, tmp, sizeof(Value::type));
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, v);
-			jit_call_method(j, &Stack::push);
-
-			RFREE(v);
-			RFREE(tmp);
+			auto type = jit_value_create_nint_constant(j, jit_type_ubyte, VALUE_NIL);
+			jit_insn_store_relative(j, v, offsetof(Value, type), type);
 			break;
 		}
 		case NODE_NUMBER: {
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_push_number");
-#endif
-			auto v = RALLOC();
-			jit_addi(j, v, R_FP, jit_allocai(j, sizeof(Value)));
-			auto tmp = RALLOC();
-			jit_movi(j, tmp, 0);
-			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
-			jit_movi(j, tmp, VALUE_NUMBER);
-			jit_stxi(j, offsetof(Value, type), v, tmp, sizeof(Value::type));
-			jit_movi(j, tmp, n->number);
-			jit_stxi(j, offsetof(Value, number), v, tmp, sizeof(Value::number));
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, v);
-			jit_call_method(j, &Stack::push);
-
-			RFREE(v);
-			RFREE(tmp);
+			auto type = jit_value_create_nint_constant(j, jit_type_ubyte, VALUE_NUMBER);
+			jit_insn_store_relative(j, v, offsetof(Value, type), type);
+			auto number = jit_value_create_nint_constant(j, jit_type_long, n->number);
+			jit_insn_store_relative(j, v, offsetof(Value, number), number);
 			break;
 		}
 		case NODE_STRING: {
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_push_string");
-#endif
-			jit_op *skip = jit_jmpi(j, JIT_FORWARD);
-
-			jit_label *l = jit_get_label(j);
-			jit_data_str(j, n->string);
-			jit_code_align(j, 32);
-			jit_patch(j, skip);
-
-			auto str = RALLOC();
-			jit_ref_data(j, str, l);
-
-			auto v = RALLOC();
-			jit_addi(j, v, R_FP, jit_allocai(j, sizeof(Value)));
-			auto tmp = RALLOC();
-			jit_movi(j, tmp, 0);
-			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
-			jit_movi(j, tmp, VALUE_STRING);
-			jit_stxi(j, offsetof(Value, type), v, tmp, sizeof(Value::type));
-			jit_stxi(j, offsetof(Value, string), v, str, sizeof(Value::string));
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, v);
-			jit_call_method(j, &Stack::push);
-			
-			RFREE(str);
-			RFREE(v);
-			RFREE(tmp);
+			auto type = jit_value_create_nint_constant(j, jit_type_ubyte, VALUE_STRING);
+			jit_insn_store_relative(j, v, offsetof(Value, type), type);
+			auto str = jit_value_create_long_constant(j, jit_type_void_ptr, (jit_long) n->string);
+			jit_insn_store_relative(j, v, offsetof(Value, string), str);
 			break;
 		}
 		case NODE_REFERENCE: {
-#ifdef JIT_DEBUG
-			jit_comment(j, "__rt_push_reference");
-#endif
-			jit_op *skip = jit_jmpi(j, JIT_FORWARD);
-
-			jit_label *l = jit_get_label(j);
-			jit_data_str(j, n->string);
-			jit_code_align(j, 32);
-			jit_patch(j, skip);
-
-			auto str = RALLOC();
-			jit_ref_data(j, str, l);
-
-			auto v = RALLOC();
-			jit_addi(j, v, R_FP, jit_allocai(j, sizeof(Value)));
-			auto tmp = RALLOC();
-			jit_movi(j, tmp, 0);
-			jit_stxi(j, offsetof(Value, a), v, tmp, sizeof(Value::a));
-			jit_movi(j, tmp, VALUE_REFERENCE);
-			jit_stxi(j, offsetof(Value, type), v, tmp, sizeof(Value::type));
-			jit_stxi(j, offsetof(Value, string), v, str, sizeof(Value::string));
-
-			jit_prepare(j);
-			jit_putargr(j, R_STACK);
-			jit_putargr(j, v);
-			jit_call_method(j, &Stack::push);
-			
-			RFREE(str);
-			RFREE(v);
-			RFREE(tmp);
+			auto type = jit_value_create_nint_constant(j, jit_type_ubyte, VALUE_REFERENCE);
+			jit_insn_store_relative(j, v, offsetof(Value, type), type);
+			auto str = jit_value_create_long_constant(j, jit_type_void_ptr, (jit_long) n->string);
+			jit_insn_store_relative(j, v, offsetof(Value, string), str);
 			break;
 		}
 		default:
 			assert(false);
 			break;
 	}
+
+	auto stack = jit_value_get_param(j, 2);
+	jit_value_t args[] = { stack, v };
+	jit_insn_call_native_method(j, "Stack::push", &Stack::push, signature_void_void_ptr_2, args, 2, JIT_CALL_NOTHROW);
 }
